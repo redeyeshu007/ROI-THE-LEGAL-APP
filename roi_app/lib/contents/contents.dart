@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:login_signup/widgets/rgb_border_painter.dart';
 import 'package:login_signup/contents/pt_1.dart';
 import 'package:login_signup/contents/pt_10.dart';
 import 'package:login_signup/contents/pt_11.dart';
@@ -59,7 +60,8 @@ class _ContentsScreenState extends State<ContentsScreen>
     with TickerProviderStateMixin {
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
-  late List<AnimationController> _cardControllers;
+  late List<AnimationController> cardControllers;
+  late AnimationController rgbCtrl;
 
   final List<Map<String, dynamic>> _contents = [
     {'title': 'Part I: Union and its Territory',             'route': '/part1',      'emoji': '🗺️', 'cat': 'Parts'},
@@ -114,15 +116,18 @@ class _ContentsScreenState extends State<ContentsScreen>
     _orbCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 2500))..repeat(reverse: true);
     _floatOffset = Tween<double>(begin: -6.0, end: 6.0).animate(CurvedAnimation(parent: _orbCtrl, curve: Curves.easeInOut));
 
-    _cardControllers = List.generate(_contents.length,
+    rgbCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 4))
+      ..repeat();
+
+    cardControllers = List.generate(_contents.length,
         (_) => AnimationController(vsync: this, duration: const Duration(milliseconds: 400)));
     _animateCards();
   }
 
   void _animateCards() async {
-    for (var i = 0; i < _cardControllers.length; i++) {
+    for (var i = 0; i < cardControllers.length; i++) {
       await Future.delayed(const Duration(milliseconds: 25));
-      if (mounted) _cardControllers[i].forward();
+      if (mounted) cardControllers[i].forward();
     }
   }
 
@@ -130,7 +135,8 @@ class _ContentsScreenState extends State<ContentsScreen>
   void dispose() {
     _fadeCtrl.dispose();
     _orbCtrl.dispose();
-    for (final c in _cardControllers) { c.dispose(); }
+    rgbCtrl.dispose();
+    for (final c in cardControllers) { c.dispose(); }
     super.dispose();
   }
 
@@ -319,14 +325,28 @@ class _ContentsScreenState extends State<ContentsScreen>
       itemCount: filtered.length,
       itemBuilder: (context, index) {
         final item = filtered[index];
-        final ctrl = _cardControllers[index % _cardControllers.length];
+        final ctrl = cardControllers[index % cardControllers.length];
         final anim = CurvedAnimation(parent: ctrl, curve: Curves.easeOut);
+        
         return AnimatedBuilder(
-          animation: anim,
-          builder: (_, child) => Transform.translate(
-            offset: Offset(40 * (1 - anim.value), 0),
-            child: Opacity(opacity: anim.value.clamp(0.0, 1.0), child: child),
-          ),
+          animation: Listenable.merge([anim, rgbCtrl]),
+          builder: (_, child) {
+            final double slideX = 40 * (1 - anim.value);
+            return Transform.translate(
+              offset: Offset(slideX, 0),
+              child: Opacity(
+                opacity: anim.value.clamp(0.0, 1.0),
+                child: CustomPaint(
+                  painter: RGBBorderPainter(
+                    animationValue: rgbCtrl.value,
+                    strokeWidth: 0.6,
+                    borderRadius: 14.0,
+                  ),
+                  child: child,
+                ),
+              ),
+            );
+          },
           child: Container(
             height: 64,
             margin: const EdgeInsets.only(bottom: 8),

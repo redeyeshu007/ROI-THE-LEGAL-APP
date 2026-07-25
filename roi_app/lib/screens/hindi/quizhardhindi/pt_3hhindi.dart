@@ -58,7 +58,7 @@ class _QuizScreenState extends State<QuizScreen3hhindi> {
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('कोई प्रश्न उपलब्ध नहीं है।'));
           } else {
-            return QuizWidget(questions: snapshot.data!);
+            return QuizWidget(questions: snapshot.data!.take(10).toList());
           }
         },
       ),

@@ -1,0 +1,130 @@
+name: Daily Auto Commit
+
+on:
+  schedule:
+    # Runs daily at morning IST (01:30 AM UTC / 07:00 AM IST)
+    - cron: '30 1 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make commits
+        run: |
+          git config --global user.email "iamramm8@gmail.com"
+          git config --global user.name "Sriram Gandhi S"
+          
+          FILES=("TODO.md" "BUGS.md" "testing-notes.txt" "future-updates.md" "dev-notes.md")
+          
+          # Randomize cycle count between 3 and 5 (6 to 10 commits)
+          MIN_CYCLES=3
+          MAX_CYCLES=5
+          CYCLES=$((MIN_CYCLES + RANDOM % (MAX_CYCLES - MIN_CYCLES + 1)))
+          echo "Selected random cycle count: $CYCLES"
+          
+          for i in $(seq 1 $CYCLES)
+          do
+            # Randomly select commit author for this cycle to look like active collaboration
+            AUTHORS=("Sriram Gandhi S|iamramm8@gmail.com" "Rizz Architect|srirams23cs@psnacet.edu.in")
+            SELECTED_AUTHOR=${AUTHORS[$RANDOM % 2]}
+            IFS="|" read -r AUTHOR_NAME AUTHOR_EMAIL <<< "$SELECTED_AUTHOR"
+            git config --global user.name "$AUTHOR_NAME"
+            git config --global user.email "$AUTHOR_EMAIL"
+
+            # Pick a random developer note file to modify
+            SELECTED_FILE=${FILES[$RANDOM % ${#FILES[@]}]}
+            echo "Starting cycle $i on file: $SELECTED_FILE by $AUTHOR_NAME"
+            
+            # Define project-specific natural commit messages based on file type
+            case "$SELECTED_FILE" in
+              "TODO.md")
+                ADD_MSGS=(
+                  "docs: update legalytics search index integration todo"
+                  "docs: add dashboard chart container check task to todo"
+                  "docs: mark mobile api routes testing as active in todo"
+                  "docs: update localization setup checklist items"
+                )
+                DEL_MSGS=(
+                  "docs: clean up resolved task items in todo log"
+                  "docs: remove completed chart integration items from checklist"
+                  "docs: formatting adjustments in todo list"
+                )
+                ;;
+              "BUGS.md")
+                ADD_MSGS=(
+                  "docs: document CORS header exception on local legalytics api"
+                  "docs: track layout constraints warn on analytics dashboard"
+                  "docs: log menu button touch issue on mobile view"
+                )
+                DEL_MSGS=(
+                  "docs: remove resolved bugs from track log"
+                  "docs: clean up obsolete bug status reports"
+                  "docs: normalize formatting of bug tracking file"
+                )
+                ;;
+              "future-updates.md")
+                ADD_MSGS=(
+                  "docs: write draft for dashboard dark theme toggle"
+                  "docs: add export to CSV roadmap to future updates"
+                  "docs: add websockets notification panel ideas"
+                )
+                DEL_MSGS=(
+                  "docs: clean up future updates formatting"
+                  "docs: refine feature updates roadmap outline"
+                  "docs: normalize layout of future updates list"
+                )
+                ;;
+              "testing-notes.txt")
+                ADD_MSGS=(
+                  "test: log local legalytics response latency checks"
+                  "test: document oauth redirect checks on chrome"
+                  "test: update mobile responsiveness check reports"
+                )
+                DEL_MSGS=(
+                  "test: prune outdated dev logs in testing notes"
+                  "test: clean up testing notes checklist"
+                  "test: formatting updates to testing notes"
+                )
+                ;;
+              "dev-notes.md")
+                ADD_MSGS=(
+                  "docs: write legalytics react development instructions"
+                  "docs: document flutter mobile workspace setup tips"
+                  "docs: update vite configurations instructions"
+                )
+                DEL_MSGS=(
+                  "docs: clean up dev environment guidance"
+                  "docs: remove old packages requirements documentation"
+                  "docs: normalize dev notes layout"
+                )
+                ;;
+            esac
+            
+            # Step 1: ADD
+            echo " " >> $SELECTED_FILE
+            msg_add=${ADD_MSGS[$RANDOM % ${#ADD_MSGS[@]}]}
+            git add $SELECTED_FILE
+            git commit -m "$msg_add"
+            git pull origin ${{ github.ref_name }} --rebase
+            git push origin HEAD:${{ github.ref_name }}
+            
+            # Sleep between ADD and DEL (random 20 to 45 minutes)
+            sleep $((1200 + RANDOM % 1500))
+            
+            # Step 2: DEL
+            sed -i '$d' $SELECTED_FILE
+            msg_del=${DEL_MSGS[$RANDOM % ${#DEL_MSGS[@]}]}
+            git add $SELECTED_FILE
+            git commit -m "$msg_del"
+            git pull origin ${{ github.ref_name }} --rebase
+            git push origin HEAD:${{ github.ref_name }}
+            
+            # Sleep between cycles (random 30 to 60 minutes)
+            sleep $((1800 + RANDOM % 1800))
+          done

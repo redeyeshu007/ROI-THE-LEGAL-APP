@@ -169,33 +169,70 @@ class _VideoPlayerScreen7State extends State<VideoPlayerScreen7> with TickerProv
                     
                     const SizedBox(height: 32),
 
-                    // 50/50 Layout
-                    Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      // Left
-                      Expanded(
-                        flex: 6,
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          const Text('CHAPTER OVERVIEW', style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primary, letterSpacing: 1.2)),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Part V, Chapter II consists of Articles 79 to 122. It covers the composition of the Lok Sabha and Rajya Sabha, and the legislative procedures of Parliament.',
-                            style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: AppColors.textPrimary, height: 1.5, fontWeight: FontWeight.w500),
+                  // ── Premium Horizontal Overview ──
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                               const Text('CHAPTER OVERVIEW',
+                                  style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.primary,
+                                      letterSpacing: 1.2)),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Part V, Chapter II consists of Articles 79 to 122. It covers the composition of the Lok Sabha and Rajya Sabha, and the legislative procedures of Parliament.',
+                                style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 13,
+                                    color: AppColors.textPrimary,
+                                    height: 1.4,
+                                    fontWeight: FontWeight.w600),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 20),
-                          _buildPremiumChip(Icons.timer_rounded, '~10 Minutes'),
-                        ]),
-                      ),
-                      const SizedBox(width: 16),
-                      // Right
-                      Expanded(
-                        flex: 4,
-                        child: Column(children: [
-                          _buildStatCard('Articles', '79 - 122', Icons.menu_book_rounded),
-                          const SizedBox(height: 12),
-                          _buildStatCard('Level', 'Intermediate', Icons.auto_awesome_rounded),
-                        ]),
-                      ),
-                    ]),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          width: 1,
+                          height: 40,
+                          color: Colors.grey.withOpacity(0.2),
+                        ),
+                        const SizedBox(width: 12),
+                        // Stats Vertical
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildPremiumChip(Icons.timer_rounded, '~10m'),
+                            const SizedBox(height: 8),
+                            _buildPremiumChip(Icons.menu_book_rounded, '79-122 Arg'),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
 
                     const SizedBox(height: 32),
 

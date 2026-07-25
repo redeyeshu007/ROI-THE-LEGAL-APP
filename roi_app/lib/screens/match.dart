@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:login_signup/screens/dashpage.dart';
 import 'package:login_signup/theme/app_colors.dart';
+import 'package:login_signup/screens/dashpage.dart';
+import 'package:get/get.dart';
 
 class MatchGameScreen extends StatefulWidget {
   const MatchGameScreen({super.key});
@@ -29,8 +30,13 @@ class _MatchGameScreenState extends State<MatchGameScreen> {
 
   Future<void> fetchMatchData() async {
     try {
+      String collectionName = 'matchData';
+      final langCode = Get.locale?.languageCode;
+      if (langCode == 'hi') collectionName = 'matchDataHindi';
+      if (langCode == 'ta') collectionName = 'matchDataTamil';
+
       final snapshot = await FirebaseFirestore.instance
-          .collection('matchData')
+          .collection(collectionName)
           .orderBy(FieldPath.documentId)
           .get();
 
@@ -73,28 +79,28 @@ class _MatchGameScreenState extends State<MatchGameScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Results',
-            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontFamily: 'PlusJakartaSans')),
+        title: Text('results'.tr,
+            style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontFamily: 'PlusJakartaSans')),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(children: const [
-                Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
-                SizedBox(width: 6),
-                Text('Correct Answers:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.success, fontFamily: 'Inter')),
+              Row(children: [
+                const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
+                const SizedBox(width: 6),
+                Text('correct_answers_label'.tr, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.success, fontFamily: 'Inter')),
               ]),
               const SizedBox(height: 6),
-              Text(correctAnswers.isEmpty ? 'None' : correctAnswers,
+              Text(correctAnswers.isEmpty ? 'none_text'.tr : correctAnswers,
                   style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Inter', fontSize: 13)),
               const SizedBox(height: 16),
-              Row(children: const [
-                Icon(Icons.cancel_rounded, color: AppColors.error, size: 16),
-                SizedBox(width: 6),
-                Text('Incorrect Answers:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.error, fontFamily: 'Inter')),
+              Row(children: [
+                const Icon(Icons.cancel_rounded, color: AppColors.error, size: 16),
+                const SizedBox(width: 6),
+                Text('incorrect_answers_label'.tr, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.error, fontFamily: 'Inter')),
               ]),
               const SizedBox(height: 6),
-              Text(incorrectAnswers.isEmpty ? 'No incorrect answers 🎉' : incorrectAnswers.join('\n'),
+              Text(incorrectAnswers.isEmpty ? 'no_incorrect_ans'.tr : incorrectAnswers.join('\n'),
                   style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Inter', fontSize: 13)),
             ],
           ),
@@ -102,7 +108,7 @@ class _MatchGameScreenState extends State<MatchGameScreen> {
         actions: [
           ElevatedButton(
             onPressed: () { Navigator.pop(context); nextMatch(); },
-            child: const Text('Next Match'),
+            child: Text('next_match_btn'.tr),
           ),
         ],
       ),
@@ -127,17 +133,17 @@ class _MatchGameScreenState extends State<MatchGameScreen> {
         builder: (_) => AlertDialog(
           backgroundColor: AppColors.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('🎉 Game Complete!',
-              style: TextStyle(color: AppColors.textPrimary, fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.bold)),
-          content: const Text("You've completed all matches!",
-              style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Inter')),
+          title: Text('game_complete_title'.tr,
+              style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.bold)),
+          content: Text("completed_all_matches".tr,
+              style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Inter')),
           actions: [
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
                 Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Dashpage()));
               },
-              child: const Text('Return to Dashboard'),
+              child: Text('return_to_dashboard'.tr),
             ),
           ],
         ),
@@ -182,7 +188,7 @@ class _MatchGameScreenState extends State<MatchGameScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8)],
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8)],
                     ),
                     child: const Icon(Icons.arrow_back_ios_new_rounded, size: 15, color: kPrimary),
                   ),
@@ -192,12 +198,12 @@ class _MatchGameScreenState extends State<MatchGameScreen> {
                 ShaderMask(
                   blendMode: BlendMode.srcIn,
                   shaderCallback: (b) => const LinearGradient(colors: [kPrimary, kPrimary2]).createShader(b),
-                  child: const Text('Match Game', style: TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w900, fontSize: 20)),
+                  child: Text('match_game_title'.tr, style: const TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w900, fontSize: 20)),
                 ),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(color: kPrimary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
                   child: Text(
                     '${currentMatchIndex + 1} / ${matchDocuments?.length ?? 1}',
                     style: const TextStyle(color: kPrimary, fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 11),
@@ -216,17 +222,17 @@ class _MatchGameScreenState extends State<MatchGameScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.6),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: kPrimary.withValues(alpha: 0.1)),
+                  border: Border.all(color: kPrimary.withOpacity(0.1)),
                 ),
                 child: Row(children: [
                    const Text('💡', style: TextStyle(fontSize: 18)),
                    const SizedBox(width: 12),
-                   Expanded(
-                     child: Text(
-                       'Drag the law cards and drop them onto the matching descriptions below.',
-                       style: TextStyle(color: kPrimary.withValues(alpha: 0.8), fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600),
-                     ),
-                   ),
+                    Expanded(
+                      child: Text(
+                        'match_instruction'.tr,
+                        style: TextStyle(color: kPrimary.withOpacity(0.8), fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ),
                 ]),
               ),
 
@@ -244,8 +250,8 @@ class _MatchGameScreenState extends State<MatchGameScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(18),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
-                          border: Border.all(color: kPrimary.withValues(alpha: 0.08)),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+                          border: Border.all(color: kPrimary.withOpacity(0.08)),
                         ),
                         padding: const EdgeInsets.all(16),
                         child: Row(children: [
@@ -260,14 +266,14 @@ class _MatchGameScreenState extends State<MatchGameScreen> {
                             builder: (context, candidateData, _) {
                               final highlight = candidateData.isNotEmpty;
                               Color bgColor = Colors.white;
-                              Color borderColor = kPrimary.withValues(alpha: 0.15);
+                              Color borderColor = kPrimary.withOpacity(0.15);
                               
                               if (showResult) {
                                 final correct = isCorrect[law] == true;
                                 bgColor = correct ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2);
                                 borderColor = correct ? const Color(0xFF10B981) : const Color(0xFFEF4444);
                               } else if (highlight) {
-                                bgColor = kPrimary.withValues(alpha: 0.05);
+                                bgColor = kPrimary.withOpacity(0.05);
                                 borderColor = kPrimary;
                               }
 
@@ -280,14 +286,14 @@ class _MatchGameScreenState extends State<MatchGameScreen> {
                                   border: Border.all(color: borderColor, width: (highlight || showResult) ? 2 : 1),
                                 ),
                                 child: Center(
-                                  child: Text(
-                                    matched[law] ?? '+ Drop',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: matched[law] != null ? const Color(0xFF0F172A) : Colors.black26,
-                                      fontSize: 11, fontFamily: 'Inter', fontWeight: FontWeight.w800,
+                                    child: Text(
+                                      matched[law] ?? 'drop_here'.tr,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: matched[law] != null ? const Color(0xFF0F172A) : Colors.black26,
+                                        fontSize: 11, fontFamily: 'Inter', fontWeight: FontWeight.w800,
+                                      ),
                                     ),
-                                  ),
                                 ),
                               );
                             },
@@ -354,7 +360,7 @@ class _MatchGameScreenState extends State<MatchGameScreen> {
                     ),
                     child: Center(
                       child: Text(
-                        showResult ? 'SEE RESULTS' : 'CHECK ANSWERS',
+                        showResult ? 'see_results_btn'.tr : 'check_answers_btn'.tr,
                         style: const TextStyle(color: Colors.white, fontFamily: 'Inter', fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5),
                       ),
                     ),

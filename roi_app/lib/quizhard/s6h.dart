@@ -5,6 +5,8 @@ import 'package:login_signup/quizeasy/contentsquize.dart';
 import 'package:login_signup/theme/app_colors.dart';
 import 'package:login_signup/widgets/quiz_template.dart';
 import 'package:login_signup/widgets/gamified_quiz_dialogs.dart';
+import 'package:login_signup/screens/homepage_screen.dart';
+
 
 class QuizScreenS6h extends StatefulWidget {
   const QuizScreenS6h({super.key});
@@ -54,7 +56,7 @@ class _QuizScreenS6hState extends State<QuizScreenS6h> {
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('No questions available.', style: TextStyle(color: AppColors.textPrimary)));
           } else {
-            return QuizLogicWidget(questions: snapshot.data!);
+            return QuizLogicWidget(questions: snapshot.data!.take(10).toList());
           }
         },
       ),
@@ -108,6 +110,8 @@ class _QuizLogicWidgetState extends State<QuizLogicWidget> {
     await _firestore.collection('users').doc(userId).update({
       'hardQuizzesCompleted': FieldValue.increment(1),
       'totalQuizzesCompleted': FieldValue.increment(1),
+      'quizHistory': FieldValue.arrayUnion([{'chapter': 'Quiz', 'score': _score, 'date': DateTime.now().toIso8601String()}]),
+
     });
 
     if (!mounted) return;
@@ -129,7 +133,7 @@ class _QuizLogicWidgetState extends State<QuizLogicWidget> {
         },
         onExit: () {
           Navigator.pop(context);
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Contents1()));
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomepageScreen()), (route) => false);
         },
       ),
     );

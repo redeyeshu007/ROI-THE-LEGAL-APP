@@ -6,6 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:login_signup/theme/app_colors.dart';
 import 'package:login_signup/quizeasy/pt_1.dart';
 import 'dart:async';
+import 'package:get/get.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class VideoPlayerScreen1 extends StatefulWidget {
   const VideoPlayerScreen1({super.key});
@@ -26,8 +28,12 @@ class _VideoPlayerScreen1State extends State<VideoPlayerScreen1>
   late AnimationController _floatCtrl;
   late Animation<double> _floatAnim;
   
+  // TTS for localized audio
+  final FlutterTts _tts = FlutterTts();
+  bool _isTtsActive = false;
+  
   final String _videoId = 'pt_1';
-  final String _videoTitle = 'Part I: Union and its Territory';
+  String get _videoTitle => 'lesson_1_title'.tr;
 
   @override
   void initState() {
@@ -40,12 +46,37 @@ class _VideoPlayerScreen1State extends State<VideoPlayerScreen1>
     _initVideo();
   }
 
+  Future<void> _initTts() async {
+    final lang = Get.locale?.languageCode ?? 'en';
+    if (lang != 'en') {
+      _isTtsActive = true;
+      // Set TTS language
+      String ttsLang = 'en-US';
+      if (lang == 'ta') ttsLang = 'ta-IN';
+      if (lang == 'hi') ttsLang = 'hi-IN';
+      await _tts.setLanguage(ttsLang);
+      await _tts.setSpeechRate(0.45);
+      await _tts.setPitch(1.0);
+      // Mute the video since we'll use TTS
+      _videoController.setVolume(0.0);
+      // Speak ONLY the lesson title
+      await _tts.speak(_videoTitle);
+    }
+  }
+
   Future<void> _initVideo() async {
-    _videoController = VideoPlayerController.asset('assets/videos/part_1.mp4');
+    // Always use the English video file (only one available)
+    String assetPath = 'assets/videos/part_1.mp4';
+
+    _videoController = VideoPlayerController.asset(assetPath);
     try {
       await _videoController.initialize();
-      
-      // Load saved progress
+    } catch (e) {
+      if (mounted) setState(() => _hasVideoError = true);
+      return;
+    }
+
+    try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId != null) {
         final doc = await FirebaseFirestore.instance.collection('users').doc(userId).collection('video_progress').doc(_videoId).get();
@@ -84,6 +115,8 @@ class _VideoPlayerScreen1State extends State<VideoPlayerScreen1>
         _progressTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
           _saveProgress();
         });
+        // Start TTS narration for non-English
+        _initTts();
       }
     } catch (e) {
       if (mounted) setState(() => _hasVideoError = true);
@@ -140,8 +173,8 @@ class _VideoPlayerScreen1State extends State<VideoPlayerScreen1>
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Lesson Details',
-              style: TextStyle(
+          title: Text('lesson_details'.tr,
+              style: const TextStyle(
                   fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.bold)),
           content: const Text(
             'In this lesson, we explore the Union and its Territory. This covers Part I of the Indian Constitution, detailing the name and territory of the Union.',
@@ -150,8 +183,8 @@ class _VideoPlayerScreen1State extends State<VideoPlayerScreen1>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Got it',
-                  style: TextStyle(
+              child: Text('got_it'.tr,
+                  style: const TextStyle(
                       color: AppColors.primary, fontWeight: FontWeight.bold)),
             ),
           ],
@@ -167,6 +200,7 @@ class _VideoPlayerScreen1State extends State<VideoPlayerScreen1>
     _floatCtrl.dispose();
     _videoController.dispose();
     _chewieController?.dispose();
+    if (_isTtsActive) _tts.stop();
     super.dispose();
   }
 
@@ -203,10 +237,10 @@ class _VideoPlayerScreen1State extends State<VideoPlayerScreen1>
                       onPressed: () => Navigator.pop(context),
                     ),
                     const SizedBox(width: 8),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'The Union & Territory',
-                        style: TextStyle(
+                        _videoTitle,
+                        style: const TextStyle(
                           fontFamily: 'PlusJakartaSans',
                           fontWeight: FontWeight.w800,
                           fontSize: 20,
@@ -257,52 +291,71 @@ class _VideoPlayerScreen1State extends State<VideoPlayerScreen1>
 
                     const SizedBox(height: 32),
 
-                    // 50/50 Layout for Overview and Stats
-                    Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 6,
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('CHAPTER OVERVIEW',
-                                      style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppColors.primary,
-                                          letterSpacing: 1.2)),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'Article 1 to 4 focuses on the Union. It defines India as a Union of States.',
-                                    style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 14,
-                                        color: AppColors.textPrimary,
-                                        height: 1.5,
-                                        fontWeight: FontWeight.w500),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  _buildPremiumChip(
-                                      Icons.timer_rounded, 
-                                      _isVideoReady 
-                                        ? '${_videoController.value.duration.inMinutes} Min ${_videoController.value.duration.inSeconds % 60}s'
-                                        : 'Loading...'),
-                                ]),
+                    // ── Premium Horizontal Overview ──
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                               Text('chapter_overview'.tr,
+                                  style: const TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.primary,
+                                      letterSpacing: 1.2)),
+                              const SizedBox(height: 6),
+                              Text(
+                                'lesson_1_overview'.tr,
+                                style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 13,
+                                    color: AppColors.textPrimary,
+                                    height: 1.4,
+                                    fontWeight: FontWeight.w600),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            flex: 4,
-                            child: Column(children: [
-                              _buildStatCard(
-                                  'Articles', '1 - 4', Icons.menu_book_rounded),
-                              const SizedBox(height: 12),
-                              _buildStatCard('Level', 'Basic',
-                                  Icons.auto_awesome_rounded),
-                            ]),
-                          ),
-                        ]),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          width: 1,
+                          height: 40,
+                          color: Colors.grey.withOpacity(0.2),
+                        ),
+                        const SizedBox(width: 12),
+                        // Stats Vertical
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildPremiumChip(Icons.timer_rounded, 
+                                _isVideoReady ? '${_videoController.value.duration.inMinutes}m' : '...'),
+                            const SizedBox(height: 8),
+                            _buildPremiumChip(Icons.menu_book_rounded, '1-4 Arg'),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
 
                     const SizedBox(height: 32),
 
@@ -319,8 +372,8 @@ class _VideoPlayerScreen1State extends State<VideoPlayerScreen1>
                       child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Key Terms 💡',
-                                style: TextStyle(
+                             Text('key_terms'.tr,
+                                style: const TextStyle(
                                     fontFamily: 'PlusJakartaSans',
                                     fontWeight: FontWeight.w800,
                                     fontSize: 16)),
@@ -350,8 +403,8 @@ class _VideoPlayerScreen1State extends State<VideoPlayerScreen1>
                           elevation: 10,
                           shadowColor: AppColors.primary.withOpacity(0.4),
                         ),
-                        child: const Text('Take Chapter Quiz 🎯',
-                            style: TextStyle(
+                         child: Text('take_quiz'.tr,
+                            style: const TextStyle(
                                 fontFamily: 'PlusJakartaSans',
                                 fontWeight: FontWeight.w800,
                                 fontSize: 16,
@@ -373,15 +426,15 @@ class _VideoPlayerScreen1State extends State<VideoPlayerScreen1>
     if (_hasVideoError) {
       return Container(
         color: AppColors.primaryBg,
-        child: const Center(
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline_rounded,
+              const Icon(Icons.error_outline_rounded,
                   color: AppColors.textSecondary, size: 40),
-              SizedBox(height: 8),
-              Text('Video unavailable',
-                  style: TextStyle(
+              const SizedBox(height: 8),
+              Text('video_unavailable'.tr,
+                  style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontFamily: 'Inter',
                       fontSize: 13)),
@@ -410,18 +463,18 @@ class _VideoPlayerScreen1State extends State<VideoPlayerScreen1>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Lesson Complete! 🎉', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'PlusJakartaSans')),
+                  Text('lesson_complete'.tr, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'PlusJakartaSans')),
                   const SizedBox(height: 12),
-                  Text('Starting Quiz in $_redirectCountdown seconds...', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                  Text('starting_quiz'.trParams({'count': _redirectCountdown.toString()}), style: const TextStyle(color: Colors.white70, fontSize: 14)),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: _enterQuiz,
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                    child: const Text('Start Now', style: TextStyle(color: Colors.white)),
+                    child: Text('start_now_btn'.tr, style: const TextStyle(color: Colors.white)),
                   ),
                   TextButton(
                     onPressed: () => setState(() => _isRedirecting = false),
-                    child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+                    child: Text('cancel'.tr, style: const TextStyle(color: Colors.white60)),
                   ),
                 ],
               ),

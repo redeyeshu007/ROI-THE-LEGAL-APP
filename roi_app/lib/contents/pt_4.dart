@@ -4,8 +4,10 @@ import 'package:chewie/chewie.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:login_signup/theme/app_colors.dart';
+import 'package:get/get.dart';
 import 'package:login_signup/quizeasy/pt_4.dart';
 import 'dart:async';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class VideoPlayerScreen4 extends StatefulWidget {
   const VideoPlayerScreen4({super.key});
@@ -26,8 +28,12 @@ class _VideoPlayerScreen4State extends State<VideoPlayerScreen4>
   late AnimationController _floatCtrl;
   late Animation<double> _floatAnim;
 
+  // TTS for localized audio
+  final FlutterTts _tts = FlutterTts();
+  bool _isTtsActive = false;
+
   final String _videoId = 'pt_4';
-  final String _videoTitle = 'Part IV: Directive Principles';
+  String get _videoTitle => 'lesson_4_title'.tr;
 
   @override
   void initState() {
@@ -40,11 +46,34 @@ class _VideoPlayerScreen4State extends State<VideoPlayerScreen4>
     _initVideo();
   }
 
+  Future<void> _initTts() async {
+    final lang = Get.locale?.languageCode ?? 'en';
+    if (lang != 'en') {
+      _isTtsActive = true;
+      String ttsLang = 'en-US';
+      if (lang == 'ta') ttsLang = 'ta-IN';
+      if (lang == 'hi') ttsLang = 'hi-IN';
+      await _tts.setLanguage(ttsLang);
+      await _tts.setSpeechRate(0.45);
+      await _tts.setPitch(1.0);
+      _videoController.setVolume(0.0);
+      // Speak ONLY the lesson title
+      await _tts.speak(_videoTitle);
+    }
+  }
+
   Future<void> _initVideo() async {
-    _videoController = VideoPlayerController.asset('assets/videos/4.mp4');
+    // Always use the base English video
+    const String assetPath = 'assets/videos/4.mp4';
+    _videoController = VideoPlayerController.asset(assetPath);
     try {
       await _videoController.initialize();
-      
+    } catch (e) {
+      if (mounted) setState(() => _hasVideoError = true);
+      return;
+    }
+
+    try {
       // Load saved progress
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId != null) {
@@ -83,6 +112,7 @@ class _VideoPlayerScreen4State extends State<VideoPlayerScreen4>
         _progressTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
           _saveProgress();
         });
+        _initTts(); // Start TTS narration for non-English
       }
     } catch (e) {
       if (mounted) setState(() => _hasVideoError = true);
@@ -138,7 +168,7 @@ class _VideoPlayerScreen4State extends State<VideoPlayerScreen4>
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Lesson Details', style: TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.bold)),
+          title: Text('lesson_details'.tr, style: const TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.bold)),
           content: const Text(
             'In this lesson, we explore the Directive Principles of State Policy (Part IV), which provide guidance for the state to ensure social and economic justice.',
             style: TextStyle(fontFamily: 'Inter'),
@@ -146,7 +176,7 @@ class _VideoPlayerScreen4State extends State<VideoPlayerScreen4>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Got it', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+              child: Text('got_it'.tr, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -190,10 +220,10 @@ class _VideoPlayerScreen4State extends State<VideoPlayerScreen4>
                       onPressed: () => Navigator.pop(context),
                     ),
                     const SizedBox(width: 8),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Directive Principles',
-                        style: TextStyle(
+                        _videoTitle,
+                        style: const TextStyle(
                           fontFamily: 'PlusJakartaSans',
                           fontWeight: FontWeight.w800,
                           fontSize: 20,
@@ -245,11 +275,11 @@ class _VideoPlayerScreen4State extends State<VideoPlayerScreen4>
                       Expanded(
                         flex: 6,
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          const Text('CHAPTER OVERVIEW', style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primary, letterSpacing: 1.2)),
+                          Text('chapter_overview'.tr, style: const TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primary, letterSpacing: 1.2)),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Part IV consists of Articles 36 to 51. These principles are non-justiciable but are fundamental in the governance of the country.',
-                            style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: AppColors.textPrimary, height: 1.5, fontWeight: FontWeight.w500),
+                          Text(
+                            'lesson_4_overview'.tr,
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 14, color: AppColors.textPrimary, height: 1.5, fontWeight: FontWeight.w500),
                           ),
                           const SizedBox(height: 20),
                           _buildPremiumChip(
@@ -283,7 +313,7 @@ class _VideoPlayerScreen4State extends State<VideoPlayerScreen4>
                         border: Border.all(color: AppColors.primary.withOpacity(0.08)),
                       ),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        const Text('Key Terms 💡', style: TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w800, fontSize: 16)),
+                        Text('key_terms'.tr, style: const TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w800, fontSize: 16)),
                         const SizedBox(height: 12),
                         const Text('Welfare State, Social Justice, Economic Justice', 
                           style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: AppColors.textSecondary, height: 1.6)),
@@ -303,7 +333,7 @@ class _VideoPlayerScreen4State extends State<VideoPlayerScreen4>
                           elevation: 10,
                           shadowColor: AppColors.primary.withOpacity(0.4),
                         ),
-                        child: const Text('Take Chapter Quiz 🎯', style: TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w800, fontSize: 16, color: Colors.white)),
+                        child: Text('take_quiz'.tr, style: const TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w800, fontSize: 16, color: Colors.white)),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -321,13 +351,13 @@ class _VideoPlayerScreen4State extends State<VideoPlayerScreen4>
     if (_hasVideoError) {
       return Container(
         color: AppColors.primaryBg,
-        child: const Center(
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline_rounded, color: AppColors.textSecondary, size: 40),
-              SizedBox(height: 8),
-              const Text('Video unavailable', style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Inter', fontSize: 13)),
+              const Icon(Icons.error_outline_rounded, color: AppColors.textSecondary, size: 40),
+              const SizedBox(height: 8),
+              Text('video_unavailable'.tr, style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Inter', fontSize: 13)),
             ],
           ),
         ),
@@ -353,18 +383,18 @@ class _VideoPlayerScreen4State extends State<VideoPlayerScreen4>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Lesson Complete! 🎉', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'PlusJakartaSans')),
+                  Text('lesson_complete'.tr, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'PlusJakartaSans')),
                   const SizedBox(height: 12),
-                  Text('Starting Quiz in $_redirectCountdown seconds...', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                  Text('starting_quiz'.trParams({'count': _redirectCountdown.toString()}), style: const TextStyle(color: Colors.white70, fontSize: 14)),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: _enterQuiz,
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                    child: const Text('Start Now', style: TextStyle(color: Colors.white)),
+                    child: Text('start_now_btn'.tr, style: const TextStyle(color: Colors.white)),
                   ),
                   TextButton(
                     onPressed: () => setState(() => _isRedirecting = false),
-                    child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+                    child: Text('cancel'.tr, style: const TextStyle(color: Colors.white60)),
                   ),
                 ],
               ),

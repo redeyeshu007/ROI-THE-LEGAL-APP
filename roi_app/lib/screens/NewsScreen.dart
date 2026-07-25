@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:login_signup/theme/app_colors.dart';
 import 'package:login_signup/widgets/falling_symbols.dart';
 import 'NewsDetailScreen.dart';
+import 'package:get/get.dart';
 
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
@@ -121,7 +122,20 @@ class _NewsScreenState extends State<NewsScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _showLanguageDialog());
+    
+    // Sync with global locale
+    final langCode = Get.locale?.languageCode;
+    if (langCode != null && _labels.containsKey(langCode)) {
+      _selectedNewsLang = langCode;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (langCode == null || langCode == 'en') {
+        _showLanguageDialog();
+      } else {
+        fetchNews();
+      }
+    });
   }
 
   void _showLanguageDialog() {

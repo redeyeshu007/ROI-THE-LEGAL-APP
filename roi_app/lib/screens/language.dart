@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'homepage_screen.dart';
-import 'package:login_signup/screens/hindi/homepage_screen_hindi.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:login_signup/screens/homepage_screen.dart';
+import 'package:login_signup/screens/signin_screen.dart';
 import 'package:login_signup/theme/app_colors.dart';
+import 'package:login_signup/theme/app_colors.dart' show kPrimary, kPrimary2;
 import 'package:login_signup/widgets/dynamic_particles.dart';
 import 'package:login_signup/widgets/falling_symbols.dart';
 
@@ -11,6 +13,14 @@ class LanguageSelectionScreen extends StatelessWidget {
 
   void _signout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
+    if (context.mounted) {
+      Get.offAll(() => const SignInScreen());
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const SignInScreen()),
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -50,19 +60,19 @@ class LanguageSelectionScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Rules of India',
-                            style: TextStyle(
+                          Text(
+                            'rules_of_india'.tr,
+                            style: const TextStyle(
                               fontFamily: 'PlusJakartaSans',
                               color: AppColors.textPrimary,
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
-                          const Text(
-                            'AI Legal Platform',
+                          Text(
+                            'ai_legal_platform'.tr,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontFamily: 'Inter',
                               color: AppColors.textSecondary,
                               fontSize: 10,
@@ -82,12 +92,12 @@ class LanguageSelectionScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: AppColors.border),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(Icons.logout_rounded, color: AppColors.textSecondary, size: 16),
-                            SizedBox(width: 6),
-                            Text('Logout',
-                                style: TextStyle(fontFamily: 'Inter', color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
+                            const Icon(Icons.logout_rounded, color: AppColors.textSecondary, size: 16),
+                            const SizedBox(width: 6),
+                            Text('logout'.tr,
+                                style: const TextStyle(fontFamily: 'Inter', color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
                           ],
                         ),
                       ),
@@ -98,9 +108,9 @@ class LanguageSelectionScreen extends StatelessWidget {
                 const Spacer(flex: 2),
 
                 // Main Content
-                const Text(
-                  'Choose your\nlanguage',
-                  style: TextStyle(
+                Text(
+                  'choose_language'.tr,
+                  style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
                     color: AppColors.textPrimary,
                     fontSize: 36,
@@ -109,9 +119,9 @@ class LanguageSelectionScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                const Text(
-                  'Select the language you\'d like to learn in.',
-                  style: TextStyle(fontFamily: 'Inter', color: AppColors.textSecondary, fontSize: 15),
+                Text(
+                  'select_learn_lang'.tr,
+                  style: const TextStyle(fontFamily: 'Inter', color: AppColors.textSecondary, fontSize: 15),
                 ),
 
                 const Spacer(),
@@ -122,10 +132,13 @@ class LanguageSelectionScreen extends StatelessWidget {
                   subtitle: 'Learn in English',
                   flag: '🇺🇸',
                   accentColor: AppColors.primary,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => HomepageScreen()),
-                  ),
+                  onTap: () {
+                    Get.updateLocale(const Locale('en'));
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomepageScreen()),
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 16),
@@ -136,10 +149,30 @@ class LanguageSelectionScreen extends StatelessWidget {
                   subtitle: 'हिंदी में सीखें',
                   flag: '🇮🇳',
                   accentColor: const Color(0xFFF59E0B),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => HomepageScreenHindi()),
-                  ),
+                  onTap: () {
+                    Get.updateLocale(const Locale('hi'));
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomepageScreen()),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                // Tamil Option
+                _LanguageCard(
+                  title: 'தமிழ்',
+                  subtitle: 'தமிழில் கற்க',
+                  flag: '🇮🇳',
+                  accentColor: const Color(0xFF10B981),
+                  onTap: () {
+                    Get.updateLocale(const Locale('ta'));
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomepageScreen()),
+                    );
+                  },
                 ),
 
                 const Spacer(flex: 2),
@@ -229,20 +262,22 @@ class _LanguageCardState extends State<_LanguageCard> with SingleTickerProviderS
                 children: [
                   Text(widget.flag, style: const TextStyle(fontSize: 32)),
                   const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(widget.title,
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            color: AppColors.textPrimary,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                          )),
-                      const SizedBox(height: 3),
-                      Text(widget.subtitle,
-                          style: const TextStyle(fontFamily: 'Inter', color: AppColors.textSecondary, fontSize: 13)),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.title,
+                            style: const TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              color: AppColors.textPrimary,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                            )),
+                        const SizedBox(height: 3),
+                        Text(widget.subtitle,
+                            style: const TextStyle(fontFamily: 'Inter', color: AppColors.textSecondary, fontSize: 13)),
+                      ],
+                    ),
                   ),
                   const Spacer(),
                   Container(

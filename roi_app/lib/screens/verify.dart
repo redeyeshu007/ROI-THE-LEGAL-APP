@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/route_manager.dart';
 import 'package:login_signup/screens/wrapper.dart';
+import 'package:login_signup/screens/signin_screen.dart';
 import 'package:login_signup/theme/app_colors.dart';
 
 class Verify extends StatefulWidget {
@@ -77,6 +78,22 @@ class _VerifyState extends State<Verify> {
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await FirebaseAuth.instance.signOut();
+                    if (context.mounted) {
+                      Get.offAll(() => const SignInScreen());
+                    }
+                  },
+                  icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textSecondary),
+                  label: const Text('Cancel & Go Back',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    side: const BorderSide(color: AppColors.border),
                   ),
                 ),
               ],

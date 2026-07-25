@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:login_signup/theme/app_colors.dart';
+import 'package:get/get.dart';
 
 class FinesAndDutiesScreen extends StatefulWidget {
   const FinesAndDutiesScreen({super.key});
@@ -38,9 +39,9 @@ class _FinesAndDutiesScreenState extends State<FinesAndDutiesScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: const Text(
-          'Fines & Duties',
-          style: TextStyle(color: Colors.white, fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w700),
+        title: Text(
+          'fines_and_duties'.tr,
+          style: const TextStyle(color: Colors.white, fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w700),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
@@ -54,22 +55,22 @@ class _FinesAndDutiesScreenState extends State<FinesAndDutiesScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             color: AppColors.primaryBg,
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '⚠️ Know Your Fines & Duties',
-                  style: TextStyle(
+                  'know_fines_duties'.tr,
+                  style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'Learn about legal fines, penalties and civic duties under Indian law.',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontFamily: 'Inter'),
+                  'learn_fines_desc'.tr,
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontFamily: 'Inter'),
                 ),
               ],
             ),

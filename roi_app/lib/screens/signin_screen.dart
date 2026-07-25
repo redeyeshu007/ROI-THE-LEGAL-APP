@@ -1,15 +1,21 @@
 import 'dart:math';
+import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:get/route_manager.dart';
+import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:login_signup/screens/forget_passsword_screen.dart';
+import 'package:login_signup/screens/homepage_screen.dart';
 import 'package:login_signup/screens/signup_screen.dart';
+import 'package:login_signup/screens/verify.dart';
 import 'package:login_signup/screens/wrapper.dart';
 import 'package:login_signup/theme/app_colors.dart';
+import 'package:login_signup/widgets/dynamic_particles.dart';
+import 'package:login_signup/widgets/falling_symbols.dart';
+import 'package:login_signup/widgets/rgb_border_painter.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Animated Sign-In — Premium Light Theme with floating legal symbols
+// Animated Sign-In — Premium Crystal Theme with RGB & Neon effects
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Legal Symbol Particle
@@ -141,6 +147,53 @@ class _ParticleSystemState extends State<_ParticleSystem>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// RGB Neon Wrapper Widget
+// ─────────────────────────────────────────────────────────────────────────────
+
+class RGBNeonWrapper extends StatelessWidget {
+  final Widget child;
+  final double animationValue;
+  final double borderRadius;
+  final double strokeWidth;
+  final bool hasGlow;
+
+  const RGBNeonWrapper({
+    super.key,
+    required this.child,
+    required this.animationValue,
+    this.borderRadius = 16.0,
+    this.strokeWidth = 1.5,
+    this.hasGlow = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = HSLColor.fromAHSL(1.0, (animationValue * 360), 0.7, 0.5).toColor();
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(borderRadius),
+        boxShadow: hasGlow ? [
+          BoxShadow(
+            color: color.withOpacity(0.15),
+            blurRadius: 10,
+            spreadRadius: 1,
+          ),
+        ] : [],
+      ),
+      child: CustomPaint(
+        painter: RGBBorderPainter(
+          animationValue: animationValue,
+          strokeWidth: strokeWidth,
+          borderRadius: borderRadius,
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Sign-In Screen
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -171,9 +224,14 @@ class _SignInScreenState extends State<SignInScreen>
   late AnimationController _shimmerCtrl;
   late Animation<double> _shimmerAnim;
 
+  // RGB Border animation
+  late AnimationController _rgbCtrl;
+
   @override
   void initState() {
     super.initState();
+
+    // email.text = 'Sriramgandhi@gmmail.com'; // Removed pre-fill as per request for "faded hint"
 
     _entranceCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 1100));
@@ -188,6 +246,9 @@ class _SignInScreenState extends State<SignInScreen>
     _shimmerAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(parent: _shimmerCtrl, curve: Curves.easeInOut));
 
+    _rgbCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 4))
+      ..repeat();
+
     _entranceCtrl.forward();
   }
 
@@ -197,39 +258,85 @@ class _SignInScreenState extends State<SignInScreen>
     password.dispose();
     _entranceCtrl.dispose();
     _shimmerCtrl.dispose();
+    _rgbCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _signIn() async {
-    if (!_formSignInKey.currentState!.validate()) return;
+    if (!_formSignInKey.currentState!.validate()) {
+      Get.snackbar(
+        'validation_error'.tr,
+        'please_check_fields'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(20),
+        borderRadius: 12,
+      );
+      return;
+    }
+
     setState(() { isloading = true; errorMessage = ''; });
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: email.text.trim(), password: password.text);
+      final String trimmedEmail = email.text.trim();
+      
+      debugPrint('Attempting login for: $trimmedEmail');
+      
+      UserCredential userCred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: trimmedEmail, password: password.text);
+      
+      if (userCred.user != null) {
+        debugPrint('Sign-in successful: ${userCred.user!.uid}');
+        if (!userCred.user!.emailVerified) {
+          debugPrint('Email NOT verified, redirecting to verify page.');
+          Get.to(() => const Verify());
+        } else {
+          Get.offAll(() => const Wrapper());
+        }
+      }
     } on FirebaseAuthException catch (e) {
-      String msg = 'Login failed';
-      if (e.code == 'user-not-found') msg = 'Email not found. Please sign up first.';
-      else if (e.code == 'wrong-password') msg = 'Wrong password. Please try again.';
-      else if (e.code == 'invalid-email') msg = 'Invalid email address.';
-      else if (e.code == 'user-disabled') msg = 'This account has been disabled.';
+      debugPrint('FIREBASE AUTH ERROR: ${e.code} - ${e.message}');
+      String msg = 'login_failed_err'.tr;
+      if (e.code == 'user-not-found') msg = 'email_not_found_err'.tr;
+      else if (e.code == 'wrong-password') msg = 'wrong_password_err'.tr;
+      else if (e.code == 'invalid-email') msg = 'invalid_email_msg'.tr;
+      else if (e.code == 'user-disabled') msg = 'account_disabled_err'.tr;
+      else if (e.code == 'too-many-requests') msg = 'Too many attempts. Try again later.';
+      else if (e.code == 'network-request-failed') msg = 'Network error. Please check your connection.';
+      else msg = 'Error (${e.code}): ${e.message ?? e.toString()}';
+      
       setState(() { errorMessage = msg; });
+      
+      Get.snackbar(
+        'login_failed'.tr,
+        msg,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(20),
+        borderRadius: 12,
+      );
     } catch (e) {
-      setState(() { errorMessage = 'An error occurred: $e'; });
+      debugPrint('SIGN IN ERROR: $e');
+      setState(() { errorMessage = 'error_occurred'.trParams({'error': e.toString()}); });
+      Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.BOTTOM);
     }
-    setState(() { isloading = false; });
+    if (mounted) setState(() { isloading = false; });
   }
 
   Future<void> _googleSignIn() async {
     setState(() { isloading = true; errorMessage = ''; });
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: ['email'],
+        serverClientId: '224150240249-edpp85q0a84tvak2gd9fi19s4kad8eq8.apps.googleusercontent.com',
+      );
+      final googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
-        // User cancelled the sign-in
         setState(() { isloading = false; });
         return;
       }
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -237,9 +344,10 @@ class _SignInScreenState extends State<SignInScreen>
       final UserCredential cred = await FirebaseAuth.instance.signInWithCredential(credential);
       if (cred.user != null) Get.offAll(() => const Wrapper());
     } catch (e) {
-      setState(() { errorMessage = 'Google Sign-In failed: $e'; });
+      debugPrint('GOOGLE SIGN IN ERROR: $e');
+      setState(() { errorMessage = 'google_signin_failed'.trParams({'error': e.toString()}); });
     }
-    setState(() { isloading = false; });
+    if (mounted) setState(() { isloading = false; });
   }
 
   @override
@@ -248,57 +356,27 @@ class _SignInScreenState extends State<SignInScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // ── 1. Background gradient (light lavender)
+          // ── 1. Animated Background Gradient
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Color(0xFFF5F0FF),
-                  Color(0xFFEEE8FD),
-                  Color(0xFFF8F6FF),
-                  Color(0xFFFFFFFF),
-                ],
+                colors: [Color(0xFFF3F4F6), Colors.white],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                stops: [0.0, 0.3, 0.65, 1.0],
               ),
             ),
           ),
 
-          // ── 2. Soft radial glow accents
+          // ── 2. Floating Crystal Accents
           Positioned(
             top: -size.height * 0.12,
             left: -size.width * 0.15,
-            child: Container(
-              width: size.width * 0.7,
-              height: size.width * 0.7,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.primary.withOpacity(0.12),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
+            child: _buildRadialGlow(size.width * 0.8, AppColors.primary.withOpacity(0.15)),
           ),
           Positioned(
             bottom: -size.height * 0.1,
             right: -size.width * 0.1,
-            child: Container(
-              width: size.width * 0.6,
-              height: size.width * 0.6,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFFF59E0B).withOpacity(0.1),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
+            child: _buildRadialGlow(size.width * 0.7, const Color(0xFFF59E0B).withOpacity(0.12)),
           ),
 
           // ── 3. Floating legal symbols
@@ -308,6 +386,7 @@ class _SignInScreenState extends State<SignInScreen>
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 460),
@@ -325,7 +404,7 @@ class _SignInScreenState extends State<SignInScreen>
 
                       const SizedBox(height: 36),
 
-                      // ── Card entrance
+                      // ── Crystal Login Card
                       FadeTransition(
                         opacity: _fadeIn,
                         child: SlideTransition(
@@ -344,244 +423,280 @@ class _SignInScreenState extends State<SignInScreen>
     );
   }
 
+  Widget _buildRadialGlow(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color, Colors.transparent],
+        ),
+      ),
+    );
+  }
+
   Widget _buildLogo() {
     return Column(children: [
       // Glowing logo container
       Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF7C3AED), Color(0xFF6C3AED), Color(0xFF4F46E5)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
           borderRadius: BorderRadius.circular(28),
           boxShadow: [
-            BoxShadow(color: AppColors.primary.withOpacity(0.45), blurRadius: 30, offset: const Offset(0, 12)),
-            BoxShadow(color: AppColors.primary.withOpacity(0.15), blurRadius: 60, spreadRadius: 10),
+            BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 40, spreadRadius: 2),
           ],
         ),
-        child: Image.asset('assets/images/roi_logo_premium.png', width: 64, height: 64, filterQuality: FilterQuality.high),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withOpacity(0.3)),
+              ),
+              child: Image.asset('assets/images/roi_logo_premium.png', width: 64, height: 64),
+            ),
+          ),
+        ),
       ),
       const SizedBox(height: 18),
-      ShaderMask(
-        blendMode: BlendMode.srcIn,
-        shaderCallback: (b) => const LinearGradient(
-          colors: [Color(0xFF6C3AED), Color(0xFF4F46E5)],
-        ).createShader(b),
-        child: const Text(
-          'Rules of India',
-          softWrap: false,
-          style: TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 30, fontWeight: FontWeight.w900, letterSpacing: -0.5),
-        ),
-      ),
-      const SizedBox(height: 8),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.primaryBg,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-        ),
-        child: const Text(
-          '⚖️  AI-POWERED LEGAL LEARNING PLATFORM',
-          style: TextStyle(color: AppColors.primary, fontSize: 10, fontFamily: 'Inter', fontWeight: FontWeight.w700, letterSpacing: 1.2),
+      Text(
+        'rules_of_india'.tr,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontFamily: 'PlusJakartaSans',
+          fontSize: 28,
+          fontWeight: FontWeight.w900,
+          letterSpacing: -0.5,
+          foreground: Paint()
+            ..shader = LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryLight, const Color(0xFF4F46E5)],
+            ).createShader(const Rect.fromLTWH(0, 0, 200, 70)),
         ),
       ),
     ]);
   }
 
   Widget _buildCard() {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        // Glassmorphic light card
-        color: Colors.white.withOpacity(0.80),
+    return ClipRRect(
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.white.withOpacity(0.9), width: 1.5),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.65),
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: Colors.white.withOpacity(0.4)),
+            ),
+            child: Form(
+              key: _formSignInKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('welcome_back_signin'.tr,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 26, fontWeight: FontWeight.w900, fontFamily: 'PlusJakartaSans')),
+                  const SizedBox(height: 8),
+                  Text('signin_journey_desc'.tr,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontFamily: 'Inter', height: 1.4, fontWeight: FontWeight.w500)),
+
+                  const SizedBox(height: 32),
+
+                  // Email
+                  _buildFieldLabel('email_label'.tr),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: email,
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'enter_email_err'.tr;
+                      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) return 'invalid_email_err'.tr;
+                      return null;
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'sriramgandhi@gmail.com',
+                      hintStyle: TextStyle(color: Colors.black.withOpacity(0.2), fontWeight: FontWeight.w400),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.5),
+                      prefixIcon: const Icon(Icons.alternate_email_rounded, size: 20, color: AppColors.primary),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, top: 4),
+                    child: Text(
+                      'use_full_email_hint'.tr,
+                      style: TextStyle(fontSize: 10, color: AppColors.textSecondary.withOpacity(0.7), fontWeight: FontWeight.w500),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Password
+                  _buildFieldLabel('password_label'.tr),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: password,
+                    obscureText: !_isPasswordVisible,
+                    autofillHints: const [AutofillHints.password],
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'enter_password_err'.tr;
+                      if (value.length < 6) return 'password_length_err'.tr;
+                      return null;
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'password_hint'.tr,
+                      filled: true,
+                      hintStyle: TextStyle(color: Colors.black.withOpacity(0.2), fontWeight: FontWeight.w400),
+                      fillColor: Colors.white.withOpacity(0.5),
+                      prefixIcon: const Icon(Icons.lock_person_rounded, size: 20, color: AppColors.primary),
+                      suffixIcon: IconButton(
+                        icon: Icon(_isPasswordVisible ? Icons.visibility_rounded : Icons.visibility_off_rounded, size: 20),
+                        onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    ),
+                  ),
+
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Get.to(() => const ForgetPasswordScreen()),
+                      child: Text('forgot_password_btn'.tr,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary)),
+                    ),
+                  ),
+
+                  if (errorMessage.isNotEmpty) _buildError(),
+
+                  const SizedBox(height: 24),
+
+                  // ── Premium Sign-In Button
+                  _buildSignInButton(),
+
+                  const SizedBox(height: 24),
+                  _buildDivider(),
+                  const SizedBox(height: 24),
+
+                  // ── Neon Google Button
+                  _buildNeonGoogleButton(),
+
+                  const SizedBox(height: 32),
+                  _buildSignUpLink(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+  }
+
+  Widget _buildError() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(color: AppColors.errorBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.error.withOpacity(0.3))),
+      child: Text(errorMessage, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.error, fontSize: 13, fontWeight: FontWeight.w600)),
+    );
+  }
+
+  Widget _buildSignInButton() {
+    if (isloading) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+    
+    return AnimatedBuilder(
+      animation: _shimmerAnim,
+      builder: (context, child) {
+        return Container(
+          height: 58,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                Color.lerp(AppColors.primary, Colors.white, 0.1 * _shimmerAnim.value)!,
+                const Color(0xFF4F46E5),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8), spreadRadius: -2),
+            ],
+          ),
+          child: ElevatedButton(
+            onPressed: _signIn,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            ),
+            child: Text('sign_in_label'.tr, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.5)),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNeonGoogleButton() {
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.transparent, width: 2),
         boxShadow: [
-          BoxShadow(color: AppColors.primary.withOpacity(0.08), blurRadius: 40, offset: const Offset(0, 16)),
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 4)),
+          BoxShadow(color: AppColors.primary.withOpacity(0.05), blurRadius: 15, spreadRadius: 1),
         ],
       ),
-      child: Form(
-        key: _formSignInKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header
-            const Text('Welcome back 👋',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 24, fontWeight: FontWeight.w800, fontFamily: 'PlusJakartaSans')),
-            const SizedBox(height: 6),
-            const Text('Sign in to access your constitutional journey',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontFamily: 'Inter', height: 1.4)),
-
-            const SizedBox(height: 30),
-
-            // Email field
-            _buildFieldLabel('Email'),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: email,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Please enter your email';
-                if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) return 'Invalid email';
-                return null;
-              },
-              decoration: const InputDecoration(
-                hintText: 'you@example.com',
-                prefixIcon: Icon(Icons.mail_outline_rounded, size: 20),
-              ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: OutlinedButton.icon(
+            onPressed: _googleSignIn,
+            icon: Image.asset('assets/images/google_logo.png', width: 22, height: 22, errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata)),
+            label: Text('continue_google'.tr, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.textPrimary)),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.4),
+              side: BorderSide(color: AppColors.primary.withOpacity(0.2)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
             ),
-
-            const SizedBox(height: 18),
-
-            // Password field
-            _buildFieldLabel('Password'),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: password,
-              obscureText: !_isPasswordVisible,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => _signIn(),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Please enter your password';
-                return null;
-              },
-              decoration: InputDecoration(
-                hintText: '••••••••',
-                prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _isPasswordVisible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-                    color: AppColors.textHint, size: 20,
-                  ),
-                  onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
-                ),
-              ),
-            ),
-
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => Get.to(() => const ForgetPasswordScreen()),
-                child: const Text('Forgot password?',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.primary)),
-              ),
-            ),
-
-            // Error
-            if (errorMessage.isNotEmpty) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.errorBg,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.error.withOpacity(0.3)),
-                ),
-                child: Text(errorMessage, textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.error, fontSize: 13, fontFamily: 'Inter')),
-              ),
-              const SizedBox(height: 14),
-            ],
-
-            // ── Animated Sign-In Button
-            if (isloading)
-              const Center(child: CircularProgressIndicator(color: AppColors.primary))
-            else
-              AnimatedBuilder(
-                animation: _shimmerAnim,
-                builder: (_, child) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF6C3AED),
-                          Color.lerp(const Color(0xFF6C3AED), const Color(0xFF8B5CF6), _shimmerAnim.value)!,
-                          const Color(0xFF4F46E5),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withOpacity(0.3 + _shimmerAnim.value * 0.2),
-                          blurRadius: 16 + _shimmerAnim.value * 8,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: child,
-                  );
-                },
-                child: ElevatedButton(
-                  onPressed: _signIn,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding: const EdgeInsets.symmetric(vertical: 17),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  child: const Text('Sign In  ⚖️',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, fontFamily: 'PlusJakartaSans', color: Colors.white)),
-                ),
-              ),
-
-            const SizedBox(height: 24),
-            _buildDivider(),
-            const SizedBox(height: 20),
-
-            // ── Google button (transparent glass style)
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border, width: 1.5),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
-              ),
-              child: OutlinedButton.icon(
-                onPressed: _googleSignIn,
-                icon: const Icon(Icons.g_mobiledata_rounded, size: 26, color: Color(0xFF4285F4)),
-                label: const Text('Continue with Google',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary, fontFamily: 'Inter')),
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  side: BorderSide.none,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 28),
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Text('New to ROI? ', style: TextStyle(color: AppColors.textSecondary, fontSize: 14, fontFamily: 'Inter')),
-              GestureDetector(
-                onTap: () => Get.to(() => const SignUpScreen()),
-                child: const Text('Create Account',
-                    style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w800, fontSize: 14, fontFamily: 'Inter')),
-              ),
-            ]),
-          ],
+          ),
         ),
       ),
     );
   }
 
+  Widget _buildSignUpLink() {
+    return Center(
+      child: Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
+        Text('new_to_roi'.tr, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+        const SizedBox(width: 6),
+        GestureDetector(
+          onTap: () => Get.to(() => const SignUpScreen()),
+          child: Text('create_account_btn'.tr,
+              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 14)),
+        ),
+      ]),
+    );
+  }
+
   Widget _buildFieldLabel(String label) => Text(label,
-      style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600, fontFamily: 'Inter'));
+      style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w700, fontFamily: 'Inter'));
 
   Widget _buildDivider() => Row(children: [
-    const Expanded(child: Divider(color: AppColors.border)),
+    const Expanded(child: Divider(color: Colors.white24, thickness: 1.5)),
     Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Text('OR', style: TextStyle(color: AppColors.textHint, fontSize: 11, fontWeight: FontWeight.w700, fontFamily: 'Inter')),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Text('or_text'.tr, style: const TextStyle(color: AppColors.textHint, fontSize: 12, fontWeight: FontWeight.w800)),
     ),
-    const Expanded(child: Divider(color: AppColors.border)),
+    const Expanded(child: Divider(color: Colors.white24, thickness: 1.5)),
   ]);
 }

@@ -11,6 +11,8 @@ import 'package:login_signup/screens/language.dart';
 import 'package:login_signup/theme/app_colors.dart';
 import 'package:login_signup/widgets/falling_symbols.dart';
 import 'package:login_signup/screens/legal_survival_runner.dart';
+import 'package:login_signup/widgets/rgb_border_painter.dart';
+import 'package:get/get.dart';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -26,6 +28,7 @@ class Dashpage extends StatefulWidget {
 class _DashpageState extends State<Dashpage> with TickerProviderStateMixin {
   late AnimationController _floatCtrl;
   late Animation<double> _floatAnim;
+  late AnimationController rgbCtrl;
 
   @override
   void initState() {
@@ -36,62 +39,66 @@ class _DashpageState extends State<Dashpage> with TickerProviderStateMixin {
     )..repeat(reverse: true);
     _floatAnim = Tween<double>(begin: -8.0, end: 8.0).animate(
       CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut));
+
+    rgbCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 4))
+      ..repeat();
   }
 
   @override
   void dispose() {
     _floatCtrl.dispose();
+    rgbCtrl.dispose();
     super.dispose();
   }
 
-  static const _modules = [
+  List<_Mod> get _modules => [
     _Mod(
-      'Contents',
-      'Articles & Chapters',
+      'content_library'.tr,
+      'articles_chapters'.tr,
       '📜',
-      Color(0xFF3B82F6), Color(0xFFEFF6FF),
-      'Start reading the Constitution',
-      '12 chapters',
+      const Color(0xFF3B82F6), const Color(0xFFEFF6FF),
+      'start_reading_constitution'.tr,
+      'chapters_count'.tr,
     ),
     _Mod(
-      'Easy Mode',
-      'Foundation Quizzes',
+      'easy_mode'.tr,
+      'foundation_quizzes'.tr,
       '🌟',
-      Color(0xFF059669), Color(0xFFECFDF5),
-      'Test basic knowledge',
-      '50+ questions',
+      const Color(0xFF059669), const Color(0xFFECFDF5),
+      'test_basic_knowledge'.tr,
+      'questions_count'.tr,
     ),
     _Mod(
-      'Hard Mode',
-      'Advanced Challenges',
+      'hard_mode'.tr,
+      'advanced_challenges'.tr,
       '🔥',
-      Color(0xFFDC2626), Color(0xFFFEF2F2),
-      'Challenge yourself',
-      '30+ hard MCQs',
+      const Color(0xFFDC2626), const Color(0xFFFEF2F2),
+      'challenge_yourself'.tr,
+      'hard_mcqs_count'.tr,
     ),
     _Mod(
-      'Match Game',
-      'Drag & Match Laws',
+      'match_game'.tr,
+      'drag_match_laws'.tr,
       '🎮',
-      Color(0xFF7C3AED), Color(0xFFEDE9FE),
-      'Interactive matching game',
-      'Multiple rounds',
+      const Color(0xFF7C3AED), const Color(0xFFEDE9FE),
+      'matching_game_desc'.tr,
+      'multiple_rounds'.tr,
     ),
     _Mod(
-      'Mock Parliament',
-      'Debate & Roleplay',
+      'mock_parliament'.tr,
+      'debate_roleplay'.tr,
       '🏛️',
-      Color(0xFF0891B2), Color(0xFFECFEFF),
-      'Simulate parliament sessions',
-      'Role-based scenarios',
+      const Color(0xFF0891B2), const Color(0xFFECFEFF),
+      'parliament_sim_desc'.tr,
+      'role_scenarios'.tr,
     ),
     _Mod(
-      'Survival Runner',
-      'Legal Driving Sim',
+      'survival_runner'.tr,
+      'legal_driving_sim'.tr,
       '🚗',
-      Color(0xFFF59E0B), Color(0xFFFFFBEB),
-      'Dodge obstacles & learn traffic laws',
-      'NEW',
+      const Color(0xFFF59E0B), const Color(0xFFFFFBEB),
+      'driving_sim_desc'.tr,
+      'new_badge'.tr,
     ),
   ];
 
@@ -111,7 +118,7 @@ class _DashpageState extends State<Dashpage> with TickerProviderStateMixin {
             Column(children: [
             // Custom App Bar
             Container(
-              color: Colors.white.withValues(alpha: 0.85),
+              color: Colors.white.withOpacity(0.85),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
               child: Row(children: [
                 GestureDetector(
@@ -124,22 +131,22 @@ class _DashpageState extends State<Dashpage> with TickerProviderStateMixin {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  flex: 3,
+                  flex: 5, // Increased flex
                   child: ShaderMask(
                     blendMode: BlendMode.srcIn,
                     shaderCallback: (b) => AppColors.primaryGradient.createShader(b),
-                    child: const Column(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('Rules of India',
+                        Text('rules_of_india'.tr,
                             overflow: TextOverflow.visible,
-                            softWrap: false,
-                            style: TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w900, fontSize: 15)),
-                        Text('AI Legal Learning',
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 9)),
+                            softWrap: true, // Enabled wrapping
+                            style: const TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w900, fontSize: 13)),
+                        Text('ai_legal_learning'.tr,
+                            overflow: TextOverflow.visible, // Changed from ellipsis
+                            softWrap: true, // Enabled wrapping
+                            style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 9)),
                       ],
                     ),
                   ),
@@ -169,9 +176,13 @@ class _DashpageState extends State<Dashpage> with TickerProviderStateMixin {
                     child: Row(children: [
                       Container(width: 4, height: 22, decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(2))),
                       const SizedBox(width: 10),
-                      const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Choose a Module', style: TextStyle(fontFamily: 'PlusJakartaSans', color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
-                        Text('Tap any card to begin learning', style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontFamily: 'Inter')),
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('choose_module'.tr, 
+                            softWrap: true, // Enabled wrapping
+                            style: const TextStyle(fontFamily: 'PlusJakartaSans', color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
+                        Text('tap_to_begin'.tr, 
+                            softWrap: true, // Enabled wrapping
+                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontFamily: 'Inter')),
                       ]),
                     ]),
                   ),
@@ -207,14 +218,14 @@ class _DashpageState extends State<Dashpage> with TickerProviderStateMixin {
       ),
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        height: 180,
+        constraints: const BoxConstraints(minHeight: 180),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFF7C3AED), Color(0xFF3B82F6)],
             begin: Alignment.topLeft, end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [BoxShadow(color: const Color(0xFF7C3AED).withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 10))],
+          boxShadow: [BoxShadow(color: const Color(0xFF7C3AED).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))],
         ),
         clipBehavior: Clip.hardEdge,
         child: Stack(children: [
@@ -223,7 +234,7 @@ class _DashpageState extends State<Dashpage> with TickerProviderStateMixin {
             right: -30, top: -20,
             child: Container(
               width: 150, height: 150,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.1)),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.1)),
             ),
           ),
           Padding(
@@ -231,17 +242,18 @@ class _DashpageState extends State<Dashpage> with TickerProviderStateMixin {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
-                child: const Text('🎓 MISSION', style: TextStyle(color: Colors.white, fontSize: 10, fontFamily: 'Inter', fontWeight: FontWeight.w800, letterSpacing: 1)),
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+                child: Text('mission'.tr, style: const TextStyle(color: Colors.white, fontSize: 10, fontFamily: 'Inter', fontWeight: FontWeight.w800, letterSpacing: 1)),
               ),
               const SizedBox(height: 12),
-              const Text('Your Legal Journey\nStarts Here!',
-                  style: TextStyle(color: Colors.white, fontFamily: 'PlusJakartaSans', fontSize: 24, fontWeight: FontWeight.w900, height: 1.1)),
+              Text('legal_journey_starts'.tr,
+                  softWrap: true,
+                  style: const TextStyle(color: Colors.white, fontFamily: 'PlusJakartaSans', fontSize: 24, fontWeight: FontWeight.w900, height: 1.1)),
               const SizedBox(height: 14),
               Row(children: [
-                _StatPill('395', 'Articles'),
+                _StatPill('395', 'articles'.tr),
                 const SizedBox(width: 8),
-                _StatPill('12', 'Parts'),
+                _StatPill('12', 'parts'.tr),
               ]),
             ]),
           ),
@@ -250,7 +262,7 @@ class _DashpageState extends State<Dashpage> with TickerProviderStateMixin {
             right: 24, bottom: 24,
             child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               const Text('ROI', style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, fontFamily: 'PlusJakartaSans')),
-              Container(width: 40, height: 3, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(2))),
+              Container(width: 40, height: 3, decoration: BoxDecoration(color: Colors.white.withOpacity(0.6), borderRadius: BorderRadius.circular(2))),
             ]),
           ),
         ]),
@@ -310,80 +322,93 @@ class _GamifiedModuleCardState extends State<_GamifiedModuleCard>
   @override
   Widget build(BuildContext context) {
     final m = widget.mod;
+    final dashState = context.findAncestorStateOfType<_DashpageState>();
+
     return GestureDetector(
       onTapDown: (_) => _ctrl.reverse(),
       onTapUp: (_) { _ctrl.forward(); widget.onTap(); },
       onTapCancel: () => _ctrl.forward(),
       child: AnimatedBuilder(
-        animation: _scale,
-        builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
+        animation: Listenable.merge([_scale, dashState?.rgbCtrl ?? _ctrl]),
+        builder: (_, child) {
+          return Transform.scale(
+            scale: _scale.value,
+            child: child,
+          );
+        },
         child: Container(
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: m.color.withValues(alpha: 0.15)),
-            boxShadow: [BoxShadow(color: m.color.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4))],
+            border: Border.all(color: m.color.withOpacity(0.15)),
+            boxShadow: [BoxShadow(color: m.color.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, 4))],
           ),
-          child: Row(children: [
-            // Color accent strip + emoji
-            Container(
-              width: 78,
-              height: 80,
-              decoration: BoxDecoration(
-                color: m.bgColor,
-                borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), bottomLeft: Radius.circular(20)),
+          child: IntrinsicHeight(
+            child: Row(children: [
+              // Color accent strip + emoji
+              Container(
+                width: 78,
+                decoration: BoxDecoration(
+                  color: m.bgColor,
+                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), bottomLeft: Radius.circular(20)),
+                ),
+                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const SizedBox(height: 12),
+                  Text(m.emoji, style: const TextStyle(fontSize: 30)),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: m.color.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+                    child: Text('LV ${widget.index + 1}',
+                        style: TextStyle(color: m.color, fontSize: 9, fontFamily: 'Inter', fontWeight: FontWeight.w800)),
+                  ),
+                  const SizedBox(height: 12),
+                ]),
               ),
-              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(m.emoji, style: const TextStyle(fontSize: 30)),
-                const SizedBox(height: 2),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: m.color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
-                  child: Text('LV ${widget.index + 1}',
-                      style: TextStyle(color: m.color, fontSize: 9, fontFamily: 'Inter', fontWeight: FontWeight.w800)),
-                ),
-              ]),
-            ),
 
-            // Content
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start, 
-                  children: [
-                    Text(m.title, 
-                      maxLines: 2,
-                      overflow: TextOverflow.visible,
-                      style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w800, fontSize: 14)),
-                    const SizedBox(height: 2),
-                    Text(m.subtitle, style: TextStyle(color: m.color, fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 11)),
-                    const SizedBox(height: 4),
-                    Text(m.description, style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Inter', fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ],
+              // Content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(m.title,
+                        maxLines: 3,
+                        softWrap: true,
+                        overflow: TextOverflow.visible,
+                        style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w800, fontSize: 14)),
+                      const SizedBox(height: 2),
+                      Text(m.subtitle, softWrap: true, style: TextStyle(color: m.color, fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 11)),
+                      const SizedBox(height: 4),
+                      Text(m.description, softWrap: true, style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Inter', fontSize: 11), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
                 ),
               ),
-            ),
 
-            // Right badge + arrow
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: m.bgColor, borderRadius: BorderRadius.circular(10)),
-                  child: Text(m.badge, style: TextStyle(color: m.color, fontSize: 9, fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+              // Right badge + arrow
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: IntrinsicWidth(
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(color: m.bgColor, borderRadius: BorderRadius.circular(10)),
+                      child: Text(m.badge, softWrap: true, style: TextStyle(color: m.color, fontSize: 8, fontFamily: 'Inter', fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 28, height: 28,
+                      decoration: BoxDecoration(color: m.color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                      child: Icon(Icons.arrow_forward_ios_rounded, color: m.color, size: 12),
+                    ),
+                  ]),
                 ),
-                const SizedBox(height: 8),
-                Container(
-                  width: 30, height: 30,
-                  decoration: BoxDecoration(color: m.color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                  child: Icon(Icons.arrow_forward_ios_rounded, color: m.color, size: 13),
-                ),
-              ]),
-            ),
-          ]),
+              ),
+            ]),
+          ),
         ),
       ),
     );
@@ -414,7 +439,7 @@ class _StatPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+    decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(20)),
     child: Text('$value $label', style: const TextStyle(color: Colors.white, fontSize: 11, fontFamily: 'Inter', fontWeight: FontWeight.w700)),
   );
 }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
@@ -7,6 +8,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:login_signup/theme/app_colors.dart';
 import 'package:login_signup/widgets/falling_symbols.dart';
+import 'package:get/get.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // System Prompts (preserved exactly)
@@ -239,7 +241,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   final _feedbackCollection = FirebaseFirestore.instance.collection('feedback');
 
-  static const _kGroqKey = 'YOUR_GROQ_API_KEY_HERE'; // TODO: Move to secure config
+  static const _kGroqKey = 'REPLACE_WITH_YOUR_GROQ_API_KEY'; // Removed for security
 
   static const _kGroqUrl = 'https://api.groq.com/openai/v1/chat/completions';
 
@@ -287,6 +289,24 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       ..repeat(reverse: true);
     _floatOffset = Tween<double>(begin: -6, end: 6).animate(
       CurvedAnimation(parent: _floatAnim, curve: Curves.easeInOut));
+
+    // Sync with global locale
+    final langCode = Get.locale?.languageCode;
+    if (langCode == 'hi') {
+      _selectedLanguage = 'Hindi';
+    } else if (langCode == 'ta') {
+      _selectedLanguage = 'Tamil';
+    } else if (langCode == 'te') {
+      _selectedLanguage = 'Telugu';
+    } else if (langCode == 'mr') {
+      _selectedLanguage = 'Marathi';
+    } else if (langCode == 'ml') {
+      _selectedLanguage = 'Malayalam';
+    } else if (langCode == 'kn') {
+      _selectedLanguage = 'Kannada';
+    } else if (langCode == 'bn') {
+      _selectedLanguage = 'Bengali';
+    }
 
     _initTts();
     _initSpeech();
@@ -542,7 +562,21 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           child: Column(children: [
             _buildAppBar(),
             Expanded(
-              child: _chatStarted ? _buildChatView() : _buildWelcomeView(),
+              child: Stack(
+                children: [
+                  _chatStarted ? _buildChatView() : _buildWelcomeView(),
+                  // Gemini-like Orb
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 40),
+                      child: _GeminiOrb(
+                        visible: _isListening && _isVoiceMode,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             if (_isListening) _buildVoiceListeningBar(),
             _buildInputBar(),
@@ -1121,4 +1155,131 @@ class _DotWaveState extends State<_DotWave> with SingleTickerProviderStateMixin 
       child: Container(width: 8, height: 8, decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle)),
     ),
   );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gemini-like Animated Orb
+// ─────────────────────────────────────────────────────────────────────────────
+class _GeminiOrb extends StatefulWidget {
+  final bool visible;
+  const _GeminiOrb({required this.visible});
+
+  @override
+  State<_GeminiOrb> createState() => _GeminiOrbState();
+}
+
+class _GeminiOrbState extends State<_GeminiOrb> with SingleTickerProviderStateMixin {
+  late AnimationController _rotationCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotationCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _rotationCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: widget.visible ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+      child: AnimatedScale(
+        scale: widget.visible ? 1.0 : 0.5,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.elasticOut,
+        child: Container(
+          width: 140,
+          height: 140,
+          child: AnimatedBuilder(
+            animation: _rotationCtrl,
+            builder: (context, child) {
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Outer soft glow
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF3B82F6).withOpacity(0.3),
+                          blurRadius: 40,
+                          spreadRadius: 10,
+                        ),
+                        BoxShadow(
+                          color: const Color(0xFF7C3AED).withOpacity(0.3),
+                          blurRadius: 40,
+                          spreadRadius: 10,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Animated Gradient Core
+                  Transform.rotate(
+                    angle: _rotationCtrl.value * 2 * pi,
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: SweepGradient(
+                          colors: [
+                            const Color(0xFF3B82F6).withOpacity(0.8),
+                            const Color(0xFF8B5CF6).withOpacity(0.8),
+                            const Color(0xFFEC4899).withOpacity(0.8),
+                            const Color(0xFF3B82F6).withOpacity(0.8),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Inner "Liquid" Blur effect
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(100),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                      child: Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Center highlight
+                  Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.8),
+                          blurRadius: 15,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
 }

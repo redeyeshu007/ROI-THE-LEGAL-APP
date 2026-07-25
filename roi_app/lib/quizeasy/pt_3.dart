@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:login_signup/quizeasy/contentsquize.dart';
 import 'package:login_signup/theme/app_colors.dart';
 import 'package:login_signup/widgets/quiz_template.dart';
+import 'package:get/get.dart';
+import 'package:login_signup/screens/homepage_screen.dart';
+
 
 class QuizScreen3 extends StatefulWidget {
   const QuizScreen3({super.key});
@@ -26,7 +29,13 @@ class _QuizScreen3State extends State<QuizScreen3> {
 
   Future<List<QuizQuestionData>> _fetchQuestions() async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection('pt_3e').get();
+      String collectionName = 'pt_3e';
+      final lang = Get.locale?.languageCode;
+      if (lang == 'hi') {
+        collectionName = 'pt_3ehindi';
+      }
+      
+      QuerySnapshot snapshot = await _firestore.collection(collectionName).get();
       return snapshot.docs.map((doc) {
         var data = doc.data() as Map<String, dynamic>;
         return QuizQuestionData(
@@ -54,9 +63,9 @@ class _QuizScreen3State extends State<QuizScreen3> {
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: AppColors.textPrimary)));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No questions available.', style: TextStyle(color: AppColors.textPrimary)));
+            return Center(child: Text('video_unavailable'.tr, style: const TextStyle(color: AppColors.textPrimary)));
           } else {
-            return QuizLogicWidget(questions: snapshot.data!);
+            return QuizLogicWidget(questions: snapshot.data!.take(10).toList());
           }
         },
       ),
@@ -108,10 +117,12 @@ class _QuizLogicWidgetState extends State<QuizLogicWidget> {
       context: context,
       barrierDismissible: false,
       builder: (context) => _gamifiedDialog(
-        title: isCorrect ? "✅ Correct!" : "❌ Oops!",
-        content: isCorrect ? "Good job! Keep it up! 🚀" : "The correct answer is:\n${widget.questions[_currentIndex].correctAnswer}",
+        title: isCorrect ? "correct".tr : "oops".tr,
+        content: isCorrect
+            ? "great_job".tr
+            : "${"correct_answer_is".tr}\n${widget.questions[_currentIndex].correctAnswer}",
         color: isCorrect ? AppColors.success : AppColors.error,
-        buttonText: _currentIndex < widget.questions.length - 1 ? "Next Question" : "See Final Score",
+        buttonText: _currentIndex < widget.questions.length - 1 ? "next_question".tr : "see_results".tr,
         onNext: () {
           Navigator.pop(context);
           if (_currentIndex < widget.questions.length - 1) {
@@ -134,19 +145,21 @@ class _QuizLogicWidgetState extends State<QuizLogicWidget> {
     await _firestore.collection('users').doc(userId).update({
       'easyQuizzesCompleted': FieldValue.increment(1),
       'totalQuizzesCompleted': FieldValue.increment(1),
+      'quizHistory': FieldValue.arrayUnion([{'chapter': 'Quiz', 'score': _score, 'date': DateTime.now().toIso8601String()}]),
+
     });
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => _gamifiedDialog(
-        title: "🏁 Lesson Complete!",
-        content: "Score: $_score / ${widget.questions.length}\nYou've earned XP points! 🏆",
+        title: "level_cleared".tr,
+        content: "score_text".trParams({'score': _score.toString(), 'total': widget.questions.length.toString()}) + "\n" + "earned_xp".tr,
         color: AppColors.primary,
-        buttonText: "Finish",
+        buttonText: "finish_lesson".tr,
         onNext: () {
           Navigator.pop(context);
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Contents1()));
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomepageScreen()), (route) => false);
         },
       ),
     );
@@ -178,7 +191,7 @@ class _QuizLogicWidgetState extends State<QuizLogicWidget> {
   @override
   Widget build(BuildContext context) {
     return ThemedQuizScreen(
-      title: 'Part III: Fundamental Rights Quiz',
+      title: 'daily_quiz'.tr,
       questions: widget.questions,
       currentIndex: _currentIndex,
       selectedOption: _selectedOption,

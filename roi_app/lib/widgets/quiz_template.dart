@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:login_signup/theme/app_colors.dart';
-import 'dart:ui';
 
 class QuizQuestionData {
   final String article;
@@ -18,7 +17,7 @@ class QuizQuestionData {
   });
 }
 
-class ThemedQuizScreen extends StatelessWidget {
+class ThemedQuizScreen extends StatefulWidget {
   final String title;
   final List<QuizQuestionData> questions;
   final int currentIndex;
@@ -47,109 +46,351 @@ class ThemedQuizScreen extends StatelessWidget {
   });
 
   @override
+  State<ThemedQuizScreen> createState() => _ThemedQuizScreenState();
+}
+
+class _ThemedQuizScreenState extends State<ThemedQuizScreen>
+    with SingleTickerProviderStateMixin {
+  bool _showWrongFlash = false;
+  bool _answered = false;
+  String? _localSelected;
+  late AnimationController _flashCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _flashCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _flashCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _flashCtrl.reverse();
+      }
+      if (status == AnimationStatus.dismissed && _showWrongFlash) {
+        setState(() => _showWrongFlash = false);
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant ThemedQuizScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset state when question changes
+    if (oldWidget.currentIndex != widget.currentIndex) {
+      _answered = false;
+      _localSelected = null;
+      _showWrongFlash = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _flashCtrl.dispose();
+    super.dispose();
+  }
+
+  void _handleOptionTap(String option) {
+    if (_answered) return; // Lock after answering
+    setState(() {
+      _localSelected = option;
+      _answered = true;
+    });
+    widget.onOptionSelected(option);
+
+    final isCorrect = option == widget.questions[widget.currentIndex].correctAnswer;
+    if (!isCorrect) {
+      setState(() => _showWrongFlash = true);
+      _flashCtrl.forward();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (questions.isEmpty) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    
-    final question = questions[currentIndex];
-    final progress = (currentIndex + 1) / questions.length;
+    if (widget.questions.isEmpty) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final question = widget.questions[widget.currentIndex];
+    final progress = (widget.currentIndex + 1) / widget.questions.length;
+    final labels = ['A', 'B', 'C', 'D'];
+    final correctAnswer = question.correctAnswer;
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [backgroundColor, Colors.white],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // ── Custom AppBar ──
-              _buildAppBar(context),
-              
-              // ── Progress Bar ──
-              _buildProgressBar(progress),
+      body: Stack(
+        children: [
+          // Main content
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [widget.backgroundColor, Colors.white],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // ── App Bar (compact) ──
+                  _buildAppBar(context),
 
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Article Card
-                      _buildArticleCard(question),
-                      
-                      const SizedBox(height: 25),
+                  // ── Progress Bar ──
+                  _buildProgressBar(progress),
 
-                      // Question Card
-                      _buildQuestionCard(question),
-                      
-                      const SizedBox(height: 25),
+                  // ── Main Content (Scrollable & Spaced) ──
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Article + Question card
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: widget.accentColor,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: widget.accentColor.withOpacity(0.25),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  question.article,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12,
+                                    letterSpacing: 1.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  question.question,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontFamily: 'PlusJakartaSans',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 18,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
 
-                      // Options
-                      ...question.options.map((option) => _buildOptionCard(option)),
-                      
-                      const SizedBox(height: 30),
+                          const SizedBox(height: 24),
 
-                      // Navigation
-                      _buildNavigationButtons(),
-                      
-                      const SizedBox(height: 20),
-                    ],
+                          // ── Options (Spaced out) ──
+                          ...List.generate(
+                            question.options.length,
+                            (i) {
+                              final option = question.options[i];
+                              final label = i < labels.length ? labels[i] : '';
+                              final isSelected = _localSelected == option;
+                              final isCorrectOption = option == correctAnswer;
+                              final showAsCorrect = _answered && isCorrectOption;
+                              final showAsWrong = _answered && isSelected && !isCorrectOption;
+
+                              Color bgColor = Colors.white;
+                              Color borderColor = Colors.black12;
+                              Color textColor = AppColors.textPrimary;
+                              Color labelBg = const Color(0xFFF3F4F6);
+                              Color labelColor = const Color(0xFF6B7280);
+
+                              if (showAsCorrect) {
+                                bgColor = const Color(0xFFECFDF5);
+                                borderColor = const Color(0xFF059669);
+                                textColor = const Color(0xFF059669);
+                                labelBg = const Color(0xFF059669);
+                                labelColor = Colors.white;
+                              } else if (showAsWrong) {
+                                bgColor = const Color(0xFFFEF2F2);
+                                borderColor = const Color(0xFFDC2626);
+                                textColor = const Color(0xFFDC2626);
+                                labelBg = const Color(0xFFDC2626);
+                                labelColor = Colors.white;
+                              } else if (isSelected) {
+                                bgColor = widget.accentColor.withOpacity(0.08);
+                                borderColor = widget.accentColor;
+                                textColor = widget.accentColor;
+                                labelBg = widget.accentColor;
+                                labelColor = Colors.white;
+                              }
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: GestureDetector(
+                                  onTap: () => _handleOptionTap(option),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 250),
+                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                                    decoration: BoxDecoration(
+                                      color: bgColor,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: borderColor, width: showAsCorrect || showAsWrong ? 2.5 : 1.5),
+                                      boxShadow: isSelected ? [
+                                        BoxShadow(color: widget.accentColor.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))
+                                      ] : null,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 36,
+                                          height: 36,
+                                          decoration: BoxDecoration(
+                                            color: labelBg,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              label,
+                                              style: TextStyle(
+                                                fontFamily: 'PlusJakartaSans',
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: 16,
+                                                color: labelColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Text(
+                                            option,
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontWeight: isSelected || showAsCorrect || showAsWrong
+                                                  ? FontWeight.w700
+                                                  : FontWeight.w500,
+                                              fontSize: 15,
+                                              color: textColor,
+                                            ),
+                                          ),
+                                        ),
+                                        if (showAsCorrect)
+                                          const Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 24),
+                                        if (showAsWrong)
+                                          const Icon(Icons.cancel_rounded, color: Color(0xFFDC2626), size: 24),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          // ── Wrong Answer Banner ──
+                          if (_answered && _localSelected != correctAnswer)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              margin: const EdgeInsets.only(bottom: 20),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF2F2),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFDC2626).withOpacity(0.2)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.info_outline_rounded, color: Color(0xFFDC2626), size: 20),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      'Correct Answer: $correctAnswer',
+                                      style: const TextStyle(
+                                        color: Color(0xFFDC2626),
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          // ── Navigation (part of scroll) ──
+                          _buildNavigationButtons(),
+                          const SizedBox(height: 32),
+                        ],
+                      ),
+                    ),
                   ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Red Flash Overlay ──
+          if (_showWrongFlash)
+            AnimatedBuilder(
+              animation: _flashCtrl,
+              builder: (_, __) => IgnorePointer(
+                child: Container(
+                  color: Colors.red.withOpacity(0.15 * _flashCtrl.value),
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }
 
   Widget _buildAppBar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Row(
         children: [
-          IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
               ),
-              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.primary),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: AppColors.primary),
             ),
-            onPressed: () => Navigator.pop(context),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              title,
+              widget.title,
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
                 fontWeight: FontWeight.w800,
-                fontSize: 18,
+                fontSize: 16,
                 color: AppColors.textPrimary,
               ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: accentColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+              color: widget.accentColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
-              'Q ${currentIndex + 1}/${questions.length}',
+              'Q ${widget.currentIndex + 1}/${widget.questions.length}',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: accentColor,
+                fontSize: 11,
+                color: widget.accentColor,
               ),
             ),
           ),
@@ -160,158 +401,23 @@ class ThemedQuizScreen extends StatelessWidget {
 
   Widget _buildProgressBar(double progress) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      height: 8,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      height: 6,
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4)],
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Stack(
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeInOut,
-            width: (progress * (360)), // Simplified, should use LayoutBuilder for accuracy
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [accentColor, accentColor.withOpacity(0.7)]),
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildArticleCard(QuizQuestionData question) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: accentColor,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: accentColor.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'CHAPTER ARTICLE',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w800,
-                  fontSize: 10,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              if (question.audioUrl != null && question.audioUrl!.isNotEmpty)
-                GestureDetector(
-                  onTap: onPlayAudio,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isPlaying ? Icons.pause_rounded : Icons.volume_up_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            question.article,
-            style: const TextStyle(
-              color: Colors.white,
-              fontFamily: 'PlusJakartaSans',
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              height: 1.3,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuestionCard(QuizQuestionData question) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: accentColor.withOpacity(0.1)),
-      ),
-      child: Text(
-        question.question,
-        style: const TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w600,
-          fontSize: 16,
-          color: AppColors.textPrimary,
-          height: 1.5,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOptionCard(String option) {
-    final isSelected = selectedOption == option;
-    return GestureDetector(
-      onTap: () => onOptionSelected(option),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(
-          color: isSelected ? accentColor.withOpacity(0.08) : Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isSelected ? accentColor : Colors.black12,
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: isSelected ? [BoxShadow(color: accentColor.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 4))] : [],
-        ),
-        child: Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) => Stack(
           children: [
-            Container(
-              width: 24,
-              height: 24,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeInOut,
+              width: progress * constraints.maxWidth,
               decoration: BoxDecoration(
-                color: isSelected ? accentColor : Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: isSelected ? accentColor : Colors.black26),
-              ),
-              child: isSelected
-                  ? const Icon(Icons.check, color: Colors.white, size: 16)
-                  : null,
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Text(
-                option,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  fontSize: 15,
-                  color: isSelected ? accentColor : AppColors.textPrimary,
-                ),
+                gradient: LinearGradient(colors: [widget.accentColor, widget.accentColor.withOpacity(0.7)]),
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
           ],
@@ -323,36 +429,36 @@ class ThemedQuizScreen extends StatelessWidget {
   Widget _buildNavigationButtons() {
     return Row(
       children: [
-        if (currentIndex > 0)
+        if (widget.currentIndex > 0)
           Expanded(
             child: OutlinedButton(
-              onPressed: onPrevious,
+              onPressed: widget.onPrevious,
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: accentColor),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                padding: const EdgeInsets.symmetric(vertical: 15),
+                side: BorderSide(color: widget.accentColor),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
               ),
               child: Text(
                 'Previous',
-                style: TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.bold, color: accentColor),
+                style: TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.bold, color: widget.accentColor, fontSize: 13),
               ),
             ),
           ),
-        if (currentIndex > 0) const SizedBox(width: 15),
+        if (widget.currentIndex > 0) const SizedBox(width: 10),
         Expanded(
           flex: 2,
           child: ElevatedButton(
-            onPressed: selectedOption != null ? onNext : null,
+            onPressed: _answered ? widget.onNext : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: accentColor,
-              disabledBackgroundColor: accentColor.withOpacity(0.3),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              elevation: 4,
+              backgroundColor: widget.accentColor,
+              disabledBackgroundColor: widget.accentColor.withOpacity(0.3),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              elevation: 3,
             ),
-            child: const Text(
-              'Submit Answer 🎯',
-              style: TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.bold, color: Colors.white),
+            child: Text(
+              _answered ? 'Next →' : 'Select an Answer',
+              style: const TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
             ),
           ),
         ),

@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:login_signup/quizeasy/contentsquize.dart';
 import 'package:login_signup/theme/app_colors.dart';
 import 'package:login_signup/widgets/quiz_template.dart';
+import 'package:get/get.dart';
+import 'package:login_signup/screens/homepage_screen.dart';
+
 
 class QuizScreen1 extends StatefulWidget {
   const QuizScreen1({super.key});
@@ -26,7 +29,14 @@ class _QuizScreen1State extends State<QuizScreen1> {
 
   Future<List<QuizQuestionData>> _fetchQuestions() async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection('pt_2e').get();
+      String collectionName = 'pt_2e';
+      final lang = Get.locale?.languageCode;
+      if (lang == 'hi') {
+        collectionName = 'pt_2ehindi';
+      }
+      // Add more language logic as collections become available
+      
+      QuerySnapshot snapshot = await _firestore.collection(collectionName).get();
       return snapshot.docs.map((doc) {
         var data = doc.data() as Map<String, dynamic>;
         return QuizQuestionData(
@@ -54,9 +64,9 @@ class _QuizScreen1State extends State<QuizScreen1> {
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: AppColors.textPrimary)));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No questions available.', style: TextStyle(color: AppColors.textPrimary)));
+            return Center(child: Text('video_unavailable'.tr, style: const TextStyle(color: AppColors.textPrimary)));
           } else {
-            return QuizLogicWidget(questions: snapshot.data!);
+            return QuizLogicWidget(questions: snapshot.data!.take(10).toList());
           }
         },
       ),
@@ -96,46 +106,30 @@ class _QuizLogicWidgetState extends State<QuizLogicWidget> {
     }
   }
 
-  void _nextQuestion() {
-    if (_selectedOption == null) return;
-    bool isCorrect = _selectedOption == widget.questions[_currentIndex].correctAnswer;
-    if (isCorrect) _score++;
-
-    _showFeedbackDialog(isCorrect);
+  void _onOptionSelected(String option) {
+    if (_selectedOption != null) return;
+    setState(() => _selectedOption = option);
+    if (option == widget.questions[_currentIndex].correctAnswer) {
+      _score++;
+    }
   }
 
-  void _showFeedbackDialog(bool isCorrect) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => _gamifiedDialog(
-        title: isCorrect ? "✅ Correct!" : "❌ Oops!",
-        content: isCorrect
-            ? "Great job! You're learning fast! 🚀"
-            : "The correct answer is:\n${widget.questions[_currentIndex].correctAnswer}",
-        color: isCorrect ? AppColors.success : AppColors.error,
-        buttonText: _currentIndex < widget.questions.length - 1 ? "Next Question" : "See Results",
-        onNext: () {
-          Navigator.pop(context);
-          if (_currentIndex < widget.questions.length - 1) {
-            setState(() {
-              _currentIndex++;
-              _selectedOption = null;
-              _isPlaying = false;
-              _audioPlayer.stop();
-            });
-          } else {
-            _showFinalScore();
-          }
-        },
-      ),
-    );
+  void _nextQuestion() {
+    if (_selectedOption == null) return;
+    if (_currentIndex < widget.questions.length - 1) {
+      setState(() {
+        _currentIndex++;
+        _selectedOption = null;
+        _isPlaying = false;
+        _audioPlayer.stop();
+      });
+    } else {
+      _showFinalScore();
+    }
   }
 
   void _showFinalScore() async {
     String userId = FirebaseAuth.instance.currentUser!.uid;
-    
-    // Create a history entry
     final historyEntry = {
       'chapter': 'Part I: Union and its Territory',
       'score': _score,
@@ -146,9 +140,7 @@ class _QuizLogicWidgetState extends State<QuizLogicWidget> {
     await _firestore.collection('users').doc(userId).update({
       'easyQuizzesCompleted': FieldValue.increment(1),
       'totalQuizzesCompleted': FieldValue.increment(1),
-      // Add to history array
       'quizHistory': FieldValue.arrayUnion([historyEntry]),
-      // Award achievement if score is good (e.g., > 70%)
       if (_score / widget.questions.length >= 0.7)
         'achievements': FieldValue.arrayUnion([{
           'id': 'part1_master',
@@ -161,52 +153,31 @@ class _QuizLogicWidgetState extends State<QuizLogicWidget> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => _gamifiedDialog(
-        title: "🏁 Level Cleared!",
-        content: "Score: $_score / ${widget.questions.length}\nYou've earned +10 XP! 🏆",
-        color: AppColors.primary,
-        buttonText: "Finish Lesson",
-        onNext: () {
-          Navigator.pop(context);
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Contents1()));
-        },
-      ),
-    );
-  }
-
-  Widget _gamifiedDialog({
-    required String title,
-    required String content,
-    required Color color,
-    required String buttonText,
-    required VoidCallback onNext,
-  }) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(title, style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.w900, fontFamily: 'PlusJakartaSans')),
-            const SizedBox(height: 12),
-            Text(content, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary, fontSize: 16, fontFamily: 'Inter')),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: onNext,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: color,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  elevation: 4,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("level_cleared".tr, style: TextStyle(color: AppColors.primary, fontSize: 24, fontWeight: FontWeight.w900, fontFamily: 'PlusJakartaSans')),
+              const SizedBox(height: 12),
+              Text("score_text".trParams({'score': _score.toString(), 'total': widget.questions.length.toString()}) + "\n" + "earned_xp".tr, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary, fontSize: 16, fontFamily: 'Inter')),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomepageScreen()), (route) => false);
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                  child: Text("finish_lesson".tr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
-                child: Text(buttonText, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'PlusJakartaSans')),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -215,14 +186,14 @@ class _QuizLogicWidgetState extends State<QuizLogicWidget> {
   @override
   Widget build(BuildContext context) {
     return ThemedQuizScreen(
-      title: 'Foundation Quiz',
+      title: 'daily_quiz'.tr,
       questions: widget.questions,
       currentIndex: _currentIndex,
       selectedOption: _selectedOption,
       accentColor: AppColors.success,
       backgroundColor: AppColors.successBg,
       isPlaying: _isPlaying,
-      onOptionSelected: (opt) => setState(() => _selectedOption = opt),
+      onOptionSelected: _onOptionSelected,
       onNext: _nextQuestion,
       onPrevious: () {
         if (_currentIndex > 0) {
@@ -238,3 +209,4 @@ class _QuizLogicWidgetState extends State<QuizLogicWidget> {
     );
   }
 }
+

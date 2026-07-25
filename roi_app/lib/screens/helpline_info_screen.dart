@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:login_signup/theme/app_colors.dart';
+import 'package:get/get.dart';
 
 class HelplineInfoScreen extends StatefulWidget {
   const HelplineInfoScreen({super.key});
@@ -38,9 +39,9 @@ class _HelplineInfoScreenState extends State<HelplineInfoScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.success,
         foregroundColor: Colors.white,
-        title: const Text(
-          'Helpline Information',
-          style: TextStyle(color: Colors.white, fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w700),
+        title: Text(
+          'helpline_info'.tr,
+          style: const TextStyle(color: Colors.white, fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w700),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
@@ -54,22 +55,22 @@ class _HelplineInfoScreenState extends State<HelplineInfoScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             color: AppColors.successBg,
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '📞 Emergency & Civic Helplines',
-                  style: TextStyle(
+                  'emergency_helplines'.tr,
+                  style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'Know the right helpline numbers and contact information for various civic services.',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontFamily: 'Inter'),
+                  'know_helpline_desc'.tr,
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontFamily: 'Inter'),
                 ),
               ],
             ),

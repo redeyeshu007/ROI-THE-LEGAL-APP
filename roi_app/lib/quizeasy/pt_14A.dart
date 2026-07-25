@@ -55,7 +55,7 @@ class _QuizScreenState extends State<QuizScreen14A> {
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('No questions available.'));
           } else {
-            return QuizWidget(questions: snapshot.data!);
+            return QuizWidget(questions: snapshot.data!.take(10).toList());
           }
         },
       ),

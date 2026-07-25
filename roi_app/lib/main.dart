@@ -7,13 +7,15 @@ import 'package:get/route_manager.dart';
 import 'package:login_signup/screens/wrapper.dart';
 import 'package:login_signup/theme/theme.dart';
 
+import 'package:login_signup/nucleus_config/translations.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   if (kIsWeb) {
     await Firebase.initializeApp(
       options: const FirebaseOptions(
-        apiKey: "AIzaSyBNtH5NGKJc1LCul7xYq_1mPOlu4gugN64",
+        apiKey: "REPLACE_WITH_YOUR_FIREBASE_API_KEY",
         authDomain: "myappconsi.firebaseapp.com",
         databaseURL: "https://myappconsi-default-rtdb.asia-southeast1.firebasedatabase.app",
         projectId: "myappconsi",
@@ -27,7 +29,7 @@ void main() async {
   }
   
   // Initialize flutter_gemini before app starts
-  Gemini.init(apiKey: 'AIzaSyDc2NUcfiSlJdCYH7cNoOJN0hWcr7enGqQ');
+  Gemini.init(apiKey: 'REPLACE_WITH_YOUR_GEMINI_API_KEY');
 
   runApp(const MyApp());
 } 
@@ -40,6 +42,9 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'ROI',
+      translations: AppTranslations(),
+      locale: const Locale('en'),
+      fallbackLocale: const Locale('en'),
       theme: lightMode,
       home: const Wrapper(),
     );

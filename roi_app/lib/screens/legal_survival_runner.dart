@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Models
@@ -85,7 +86,7 @@ class _LegalSurvivalRunnerScreenState extends State<LegalSurvivalRunnerScreen>
           if (_obstacles[i].lane == _carLane) {
             if (_obstacles[i].type == _ObstacleType.pedestrian && _isBraking) {
               // Responsible driving: Avoided pedestrian
-              _showFeedback("Accident Avoided. Responsible Driving.", Colors.green);
+              _showFeedback("accident_avoided".tr, Colors.green);
             } else {
               _triggerGameOver(_obstacles[i].type);
             }
@@ -131,7 +132,7 @@ class _LegalSurvivalRunnerScreenState extends State<LegalSurvivalRunnerScreen>
     Future.delayed(const Duration(seconds: 3), () {
       if (!mounted || _gameOver) return;
       if (_isBraking) {
-        _showFeedback("You followed traffic rules.", Colors.green);
+        _showFeedback("traffic_rules_followed".tr, Colors.green);
         setState(() {
           _isTrafficSignalActive = false;
           _showSignalBanner = false;
@@ -151,10 +152,10 @@ class _LegalSurvivalRunnerScreenState extends State<LegalSurvivalRunnerScreen>
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text("Traffic Signal Violation", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-        content: const Text(
-          "You failed to stop at a Red Signal.\n\nMotor Vehicles Act Section 119:\nDisobeying traffic signs is a punishable offence.",
-          style: TextStyle(color: Colors.white70),
+        title: Text("traffic_violation_title".tr, style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+        content: Text(
+          "traffic_violation_desc".tr,
+          style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           ElevatedButton(
@@ -163,7 +164,7 @@ class _LegalSurvivalRunnerScreenState extends State<LegalSurvivalRunnerScreen>
               _restartGame();
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
-            child: const Text("Retry", style: TextStyle(color: Colors.black)),
+            child: Text("retry".tr, style: const TextStyle(color: Colors.black)),
           )
         ],
       ),
@@ -306,7 +307,7 @@ class _LegalSurvivalRunnerScreenState extends State<LegalSurvivalRunnerScreen>
         ),
         child: Column(
           children: [
-            const Text("TRAFFIC SIGNAL", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+            Text("traffic_signal".tr, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             CircleAvatar(radius: 12, backgroundColor: _signalColor),
           ],
@@ -350,7 +351,7 @@ class _LegalSurvivalRunnerScreenState extends State<LegalSurvivalRunnerScreen>
       child: Column(
         children: [
           if (_isBraking)
-            const Text("BRAKING", style: TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+            Text("braking".tr, style: const TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold)),
           _CarWidget(braking: _isBraking),
         ],
       ),
@@ -365,7 +366,7 @@ class _LegalSurvivalRunnerScreenState extends State<LegalSurvivalRunnerScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Score: ${_score.toInt()}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 20)),
+          Text('game_score'.trParams({'score': _score.toInt().toString()}), style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 20)),
           if (_isBraking)
             const Icon(Icons.flash_on, color: Colors.redAccent),
         ],
@@ -382,18 +383,18 @@ class _LegalSurvivalRunnerScreenState extends State<LegalSurvivalRunnerScreen>
           children: [
             const Icon(Icons.swipe_left_alt_rounded, color: Colors.amber, size: 64),
             const SizedBox(height: 16),
-            const Text("LEGAL RUNNER PRO", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: 2)),
+            Text("game_title".tr, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: 2)),
             const SizedBox(height: 12),
-            const Text(
-              "Swipe Left/Right to change lanes.\nLong Press to BRAKE.",
+            Text(
+              "game_instructions".tr,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70, height: 1.5),
+              style: const TextStyle(color: Colors.white70, height: 1.5),
             ),
             const SizedBox(height: 30),
             ElevatedButton(
               onPressed: _startGame,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15)),
-              child: const Text("START DRIVING", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              child: Text("start_driving".tr, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -411,20 +412,20 @@ class _LegalSurvivalRunnerScreenState extends State<LegalSurvivalRunnerScreen>
           children: [
             const Icon(Icons.report_problem_rounded, color: Colors.redAccent, size: 80),
             const SizedBox(height: 20),
-            const Text("ACCIDENT OCCURRED", style: TextStyle(color: Colors.redAccent, fontSize: 24, fontWeight: FontWeight.bold)),
+            Text("accident_occurred".tr, style: const TextStyle(color: Colors.redAccent, fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-            _ipcBadge("IPC 279", "Rash driving or riding on a public way."),
+            _ipcBadge("IPC 279", "rash_driving_title".tr),
             const SizedBox(height: 10),
-            _ipcBadge("IPC 304A", "Causing death by negligence."),
+            _ipcBadge("IPC 304A", "negligence_title".tr),
             const SizedBox(height: 30),
-            Text("Final Score: ${_score.toInt()}", style: const TextStyle(color: Colors.white, fontSize: 18)),
+            Text("${"game_score".trParams({'score': _score.toInt().toString()})}", style: const TextStyle(color: Colors.white, fontSize: 18)),
             const SizedBox(height: 30),
             ElevatedButton(
               onPressed: _restartGame,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12)),
-              child: const Text("TRY AGAIN", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              child: Text("try_again".tr, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
             ),
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Exit", style: TextStyle(color: Colors.white38))),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text("exit".tr, style: const TextStyle(color: Colors.white38))),
           ],
         ),
       ),

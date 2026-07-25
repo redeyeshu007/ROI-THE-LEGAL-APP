@@ -1,8 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:get/route_manager.dart';
+import 'package:get/get.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:login_signup/screens/signin_screen.dart';
 import 'package:login_signup/screens/wrapper.dart';
 import 'package:login_signup/theme/app_colors.dart';
@@ -50,13 +51,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
         Get.offAll(const Wrapper());
       } on FirebaseAuthException catch (e) {
-        String errorMsg = 'Sign up failed';
+        debugPrint('SIGN UP FIREBASE ERROR: ${e.code} - ${e.message}');
+        String errorMsg = 'signup_failed_err'.tr;
         if (e.code == 'email-already-in-use') {
-          errorMsg = 'Email already in use. Please log in instead.';
+          errorMsg = 'email_in_use_err'.tr;
         } else if (e.code == 'weak-password') {
-          errorMsg = 'Password is too weak. Use at least 6 characters.';
+          errorMsg = 'weak_password_err'.tr;
         } else if (e.code == 'invalid-email') {
-          errorMsg = 'Invalid email address.';
+          errorMsg = 'invalid_email_msg'.tr;
+        } else {
+          errorMsg = 'Error (${e.code}): ${e.message ?? e.toString()}';
         }
         setState(() {
           errorMessage = errorMsg;
@@ -74,14 +78,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
       errorMessage = '';
     });
     try {
-      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-      googleProvider.addScope('email');
-      UserCredential userCredential;
-      if (kIsWeb) {
-        userCredential = await FirebaseAuth.instance.signInWithPopup(googleProvider);
-      } else {
-        userCredential = await FirebaseAuth.instance.signInWithProvider(googleProvider);
+      final googleSignIn = GoogleSignIn(
+        scopes: ['email'],
+        serverClientId: '224150240249-edpp85q0a84tvak2gd9fi19s4kad8eq8.apps.googleusercontent.com',
+      );
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        setState(() { isloading = false; });
+        return;
       }
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      final UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+
       if (userCredential.user != null) {
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
@@ -92,7 +104,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               .collection('users')
               .doc(userCredential.user?.uid)
               .set({
-            'username': userCredential.user?.displayName ?? 'New User',
+            'username': userCredential.user?.displayName ?? 'new_user_default'.tr,
             'email': userCredential.user?.email ?? '',
             'easyQuizzesCompleted': 0,
             'hardQuizzesCompleted': 0,
@@ -103,8 +115,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         Get.offAll(() => const Wrapper());
       }
     } catch (e) {
+      debugPrint('GOOGLE SIGN UP/IN ERROR: $e');
       setState(() {
-        errorMessage = 'Google Sign-In failed: ${e.toString()}';
+        errorMessage = 'google_signin_failed'.trParams({'error': e.toString()});
       });
     }
     setState(() {
@@ -158,19 +171,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'Create an account 🚀',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                        Text(
+                          'create_account_title'.tr,
+                          softWrap: true,
+                          style: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 6),
-                      const Text(
-                        'Start your learning journey with us.',
-                        style: TextStyle(
+                      Text(
+                        'start_journey_desc'.tr,
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
                           fontFamily: 'Inter',
@@ -179,56 +193,56 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       const SizedBox(height: 28),
 
                       // Full Name
-                      _buildLabel('Full Name'),
+                      _buildLabel('full_name_label'.tr),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: fullName,
                         textInputAction: TextInputAction.next,
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'Please enter your name';
+                          if (value == null || value.isEmpty) return 'enter_name_err'.tr;
                           return null;
                         },
-                        decoration: const InputDecoration(
-                          hintText: 'Enter your full name',
-                          prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
+                        decoration: InputDecoration(
+                          hintText: 'full_name_hint'.tr,
+                          prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
                         ),
                       ),
                       const SizedBox(height: 18),
 
                       // Email
-                      _buildLabel('Email'),
+                      _buildLabel('email_label'.tr),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: email,
                         textInputAction: TextInputAction.next,
                         keyboardType: TextInputType.emailAddress,
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'Please enter email';
-                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) return 'Invalid email';
+                          if (value == null || value.isEmpty) return 'enter_email_err'.tr;
+                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) return 'invalid_email_err'.tr;
                           return null;
                         },
-                        decoration: const InputDecoration(
-                          hintText: 'you@example.com',
-                          prefixIcon: Icon(Icons.mail_outline_rounded, size: 20),
+                        decoration: InputDecoration(
+                          hintText: 'email_hint'.tr,
+                          prefixIcon: const Icon(Icons.mail_outline_rounded, size: 20),
                         ),
                       ),
                       const SizedBox(height: 18),
 
                       // Password
-                      _buildLabel('Password'),
+                      _buildLabel('password_label'.tr),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: password,
                         obscureText: true,
                         textInputAction: TextInputAction.done,
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'Please enter password';
-                          if (value.length < 6) return 'Password must be at least 6 characters';
+                          if (value == null || value.isEmpty) return 'enter_password_err'.tr;
+                          if (value.length < 6) return 'password_length_err'.tr;
                           return null;
                         },
-                        decoration: const InputDecoration(
-                          hintText: '••••••••',
-                          prefixIcon: Icon(Icons.lock_outline_rounded, size: 20),
+                        decoration: InputDecoration(
+                          hintText: 'password_hint'.tr,
+                          prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
                         ),
                       ),
                       const SizedBox(height: 28),
@@ -255,7 +269,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        child: const Text('Sign Up', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        child: Text('signup_btn'.tr, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                       ),
                       const SizedBox(height: 24),
 
@@ -266,8 +280,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
-                              'Or sign up with',
-                              style: TextStyle(color: AppColors.textHint, fontSize: 11, fontWeight: FontWeight.w600),
+                              'or_signup_with'.tr,
+                              style: const TextStyle(color: AppColors.textHint, fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                           ),
                           const Expanded(child: Divider(color: AppColors.border)),
@@ -279,7 +293,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       OutlinedButton.icon(
                         onPressed: () => login(),
                         icon: const Icon(Icons.g_mobiledata_rounded, size: 24),
-                        label: const Text('Continue with Google', style: TextStyle(fontWeight: FontWeight.w600)),
+                        label: Text('continue_google'.tr, style: const TextStyle(fontWeight: FontWeight.w600)),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           foregroundColor: AppColors.textPrimary,
@@ -288,19 +302,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       const SizedBox(height: 28),
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          const Text('Already have an account? ',
-                              style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                          Text('already_have_account'.tr,
+                              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                          const SizedBox(width: 4),
                           GestureDetector(
                             onTap: () => Get.to(() => const SignInScreen()),
-                            child: const Text(
-                              'Sign in',
-                              style: TextStyle(
+                            child: Text(
+                              'sign_in_link'.tr,
+                              style: const TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w700,
-                                fontSize: 13,
+                                fontSize: 12,
                               ),
                             ),
                           ),
