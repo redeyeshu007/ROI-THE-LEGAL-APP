@@ -2,3 +2,4 @@ ROI Legal App Testing notes
 - Checked OAuth redirection flow on local host.
 - Verified dashboard analytics rendering.
 - Tested responsive styling on mobile safari.
+ 
