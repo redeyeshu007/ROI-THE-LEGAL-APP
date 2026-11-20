@@ -3,4 +3,3 @@ ROI Legal App Testing notes
 - Verified dashboard analytics rendering.
 - Tested responsive styling on mobile safari.
  
- 
